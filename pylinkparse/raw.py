@@ -124,3 +124,4 @@ class Raw(object):
             The resulting figure object
         """
         return plot_calibration(raw=self, title=title, show=show)
+

@@ -4,6 +4,8 @@
 
 from raw import Raw
 from epochs import Epochs
+from event import find_custom_events
 import constants
+
 
 __version__ = 0.01
