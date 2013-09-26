@@ -11,9 +11,10 @@ from StringIO import StringIO
 
 
 
-def _assemble_data(lines, columns, sep=' '):
+def _assemble_data(lines, columns, sep='[ \t]+', na_values=['.']):
     """Aux function"""
-    return pd.read_table(StringIO(''.join(lines)), names=columns, sep=sep)
+    return pd.read_table(StringIO(''.join(lines)), names=columns, sep=sep,
+                         na_values=na_values)
 
 def _extract_sys_info(line):
     return line[line.find(':'):].strip(': \n')
@@ -77,6 +78,7 @@ class Raw(object):
 
         self.info['validation'] = pd.DataFrame(validation, dtype=np.float64)
         self._samples = _assemble_data(samples, columns=EDF.SAMPLE.split())
+        [self._samples.pop(k) for k in ['N1', 'N2']]
         del samples
         if saccades:            
             self._saccades = _assemble_data(saccades, columns=EDF.SAC.split())
@@ -88,6 +90,9 @@ class Raw(object):
             self._blinks = _assemble_data(blinks, columns=EDF.BLINK.split())
             del blinks
 
+    @property
+    def times(self):
+        return self._samples['time'].values
 
     def __repr__(self):
         return '<Raw | {0} samples>'.format(len(self._samples))
