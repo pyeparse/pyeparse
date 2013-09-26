@@ -25,6 +25,9 @@ def test_raw_io():
 
     for actual, desired in zip(raw._fixations.dtypes, EDF.FIX_DTYPES.split()):
         assert_equal(actual, np.dtype(desired))
+    for attr in ['_samples', '_saccades', '_fixations', '_blinks']:
+        key = 'time' if attr == '_samples' else ['stime', 'etime']
+        assert_equal(getattr(raw, attr)[key][0], 0.0)
 
 
 def tets_access_data():

@@ -77,6 +77,16 @@ class Raw(object):
 
         self.info['validation'] = pd.DataFrame(validation, dtype=np.float64)
         self._samples = _assemble_data(samples, columns=EDF.SAMPLE.split())
+
+        # set t0 to 0 and scale to seconds
+        self._t_zero = self._samples['time'][0]
+        for attr in ['_samples', '_saccades', ' _fixations', '_blinks']:
+            df = getattr(self, attr, None)
+            if df:
+                key = 'time' if attr == '_samples' else ['stime', 'etime']
+                df[key] -= self._t_zero
+                df[key] /= 1e3
+
         [self._samples.pop(k) for k in ['N1', 'N2']]
         del samples
         if saccades:
@@ -114,4 +124,3 @@ class Raw(object):
             The resulting figure object
         """
         return plot_calibration(raw=self, title=title, show=show)
-
