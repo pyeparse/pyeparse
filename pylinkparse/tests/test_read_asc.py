@@ -34,6 +34,7 @@ def tets_access_data():
         data, times = raw[idx]
         assert_equal(len(data), len(times))
 
+    # test for monotonous continuity
     deltas = np.unique(np.diff(times))
     assert_equal(len(deltas), 1)
     assert_equal(deltas[0], 1.0)
