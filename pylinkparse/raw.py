@@ -9,7 +9,7 @@ from StringIO import StringIO
 
 def _assemble_data(lines, columns):
     """Aux function"""
-    return pd.read_data(StringIO(''.join(lines)), names=columns)
+    return pd.read_table(StringIO(''.join(lines)), names=columns)
 
 
 class Raw(object):
@@ -35,8 +35,9 @@ class Raw(object):
         del saccades
         self._fixations = _assemble_data(fixations, columns=EDF.FIX.split())
         del fixations
-        self._blinks = _assemble_data(saccades, columns=EDF.BLINK.split())
+        self._blinks = _assemble_data(blinks, columns=EDF.BLINK.split())
         del blinks
+        self._samples = _assemble_data(samples, columns=EDF.SAMPLE.split())
 
 
     def __repr__(self):
