@@ -1,5 +1,5 @@
 import numpy as np
-from numpy.testing import assert_equal
+from nose.tools import assert_true, assert_equal
 from pylinkparse import Raw
 from pylinkparse.constants import EDF
 
@@ -25,9 +25,11 @@ def test_raw_io():
 
     for actual, desired in zip(raw._fixations.dtypes, EDF.FIX_DTYPES.split()):
         assert_equal(actual, np.dtype(desired))
+
     for attr in ['_samples', '_saccades', '_fixations', '_blinks']:
-        key = 'time' if attr == '_samples' else ['stime', 'etime']
-        assert_equal(getattr(raw, attr)[key][0], 0.0)
+        keys = ['time'] if attr == '_samples' else ['stime', 'etime']
+        for key in keys:
+            assert_true(getattr(raw, attr)[key][0] < 1.0)
 
 
 def tets_access_data():

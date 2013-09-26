@@ -11,8 +11,8 @@ def find_custom_events(raw, pattern, prefix=True, sep=' '):
     ----------
     raw : instance of pylinkparse.raw.Raw
         the raw file to find events in.
-    pattern : str | regular expression
-        The patter to be matched
+    pattern : str
+        A substring to be matched
     prefix : bool
         Whether the message includes a prefix, e.g., MSG or
         directly begins with the time sample.
@@ -25,6 +25,7 @@ def find_custom_events(raw, pattern, prefix=True, sep=' '):
         The indices found.
     """
     events = []
+
     idx = 1 if prefix else 0
     with open(raw.info['fname']) as fid:
         for line in fid:
@@ -33,4 +34,5 @@ def find_custom_events(raw, pattern, prefix=True, sep=' '):
     events = np.array(events, dtype='f8')
     events -= raw._t_zero
     events /= 1e3
+    print events
     return np.nonzero(np.in1d(raw._samples['time'], events))[0]

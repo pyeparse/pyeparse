@@ -77,16 +77,6 @@ class Raw(object):
 
         self.info['validation'] = pd.DataFrame(validation, dtype=np.float64)
         self._samples = _assemble_data(samples, columns=EDF.SAMPLE.split())
-
-        # set t0 to 0 and scale to seconds
-        self._t_zero = self._samples['time'][0]
-        for attr in ['_samples', '_saccades', ' _fixations', '_blinks']:
-            df = getattr(self, attr, None)
-            if df:
-                key = 'time' if attr == '_samples' else ['stime', 'etime']
-                df[key] -= self._t_zero
-                df[key] /= 1e3
-
         [self._samples.pop(k) for k in ['N1', 'N2']]
         del samples
         if saccades:
@@ -99,6 +89,17 @@ class Raw(object):
         if blinks:
             self._blinks = _assemble_data(blinks, columns=EDF.BLINK.split())
             del blinks
+
+        # set t0 to 0 and scale to seconds
+        self._t_zero = self._samples['time'][0]
+        for attr in ['_samples', '_saccades', '_fixations', '_blinks']:
+            df = getattr(self, attr, None)
+            if df:
+                key = 'time' if attr == '_samples' else ['stime', 'etime']
+                df[key] -= self._t_zero
+                df[key] /= 1e3
+                if key != 'time':
+                    df['dur'] /= 1e3
 
     def __repr__(self):
         return '<Raw | {0} samples>'.format(len(self._samples))
