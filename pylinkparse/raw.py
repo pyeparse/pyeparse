@@ -95,7 +95,7 @@ class Raw(object):
 
     def __getitem__(self, idx):
         data = self._samples[['xpos', 'ypos', 'ps']].values[idx]
-        times = self.times[idx]
+        times = self._samples['time']
         return data, times
 
     def plot_calibration(self, title='Calibration', show=True):
