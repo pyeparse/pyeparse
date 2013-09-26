@@ -6,6 +6,7 @@ from .constants import EDF
 from .viz import plot_calibration
 import pandas as pd
 import numpy as np
+from datetime import datetime
 from StringIO import StringIO
 
 
@@ -13,6 +14,9 @@ from StringIO import StringIO
 def _assemble_data(lines, columns, sep=' '):
     """Aux function"""
     return pd.read_table(StringIO(''.join(lines)), names=columns, sep=sep)
+
+def _extract_sys_info(line):
+    return line[line.find(':'):].strip(': \n')
 
 
 class Raw(object):
@@ -57,6 +61,19 @@ class Raw(object):
                                        'offset': line[-4],
                                        'diff-x': xy_diff[0],
                                        'diff-y': xy_diff[1]})
+                elif 'DATE:' in line:
+                    line = _extract_sys_info(line)
+                    fmt = '%a %b  %d %H:%M:%S %Y'
+                    self.info['meas_date'] = datetime.strptime(line, fmt)
+                elif 'VERSION:' in line:
+                    self.info['version'] = _extract_sys_info(line)
+                elif 'CAMERA:' in line:
+                    self.info['camera'] = _extract_sys_info(line)
+                elif 'SERIAL NUMBER:' in line:
+                    self.info['serial'] = _extract_sys_info(line)
+                elif 'CAMERA_CONFIG:' in line:
+                    self.info['camera_config'] = _extract_sys_info(line)                    
+
 
         self.info['validation'] = pd.DataFrame(validation, dtype=np.float64)
         self._samples = _assemble_data(samples, columns=EDF.SAMPLE.split())
