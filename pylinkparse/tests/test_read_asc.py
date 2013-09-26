@@ -11,3 +11,6 @@ def test_raw_io():
     """Test essential basic IO functionality"""
     raw = Raw(fname)
     print raw
+
+def tets_access_data():
+    raw = Raw(fname)
