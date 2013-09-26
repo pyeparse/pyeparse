@@ -26,6 +26,14 @@ def test_raw_io():
     for actual, desired in zip(raw._fixations.dtypes, EDF.FIX_DTYPES.split()):
         assert_equal(actual, np.dtype(desired))
 
+    deltas = np.unique(np.diff(raw.times))
+    assert_equal(len(deltas), 1)
+    assert_equal(deltas[0], 1.0)
+
 
 def tets_access_data():
+    """Test slicing and indexing"""
     raw = Raw(fname)
+    for idx in [slice(10), 1, [1, 3]]:
+        data, times = raw[idx]
+        assert_equal(len(data), len(times))
