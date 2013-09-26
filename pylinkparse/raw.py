@@ -3,9 +3,11 @@
 # License: BSD (3-clause)
 
 from .constants import EDF
+from .viz import plot_calibration
 import pandas as pd
 import numpy as np
 from StringIO import StringIO
+
 
 
 def _assemble_data(lines, columns, sep=' '):
@@ -49,12 +51,14 @@ class Raw(object):
                 elif 'VALIDATE' in line:
                     line = line.split()
                     xy = line[-6].split(',')
-                    deg = line[-2].split(',')
-                    validation.append({'point-x': xy[0], 'pint-y': xy[1],
-                                       'offset': float(line[-4]),
-                                       'deg-x': deg[0], 'deg-y': deg[1]})
+                    xy_diff = line[-2].split(',')
+                    validation.append({'point-x': xy[0],
+                                       'point-y': xy[1],
+                                       'offset': line[-4],
+                                       'diff-x': xy_diff[0],
+                                       'diff-y': xy_diff[1]})
 
-        self.info['validation'] = pd.DataFrame(validation)
+        self.info['validation'] = pd.DataFrame(validation, dtype=np.float64)
         self._samples = _assemble_data(samples, columns=EDF.SAMPLE.split())
         del samples
         if saccades:            
@@ -70,3 +74,21 @@ class Raw(object):
 
     def __repr__(self):
         return '<Raw | {0} samples>'.format(len(self._samples))
+
+    def plot_calibration(self, title='Calibration', show=True):
+        """Visualize calibration
+
+        Parameters
+        ----------
+        title : str
+            The title to be displayed.
+        show : bool
+            Whether to show the figure or not.
+        
+        Returns
+        -------
+        fig : instance of matplotlib.figure.Figure
+            The resulting figure object
+        """
+        return plot_calibration(raw=self, title=title, show=show)
+
