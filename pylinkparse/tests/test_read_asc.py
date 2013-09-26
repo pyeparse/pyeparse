@@ -18,5 +18,16 @@ def test_raw_io():
     assert_equal(len(dtypes), 1)
     assert_equal(dtypes[0], np.float64)
 
+    dtypes = raw._saccades.dtypes.unique()
+    assert_equal(len(dtypes), 3)
+    dtypes = raw._saccades.dtypes.values
+    assert_equal(raw._saccades['dur'], np.int64)
+    assert_equal(raw._saccades['pvl'], np.int64)
+    float_fields = 'stime etime sxp syp exp eyp ampl resx resy'.split()
+    dtypes = np.qunique(raw._saccades[float_fields])
+    assert_equal(len(dtypes), 1)
+    assert_equal(dtypes[0], np.int64)
+
+
 def tets_access_data():
     raw = Raw(fname)
