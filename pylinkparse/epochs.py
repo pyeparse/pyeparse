@@ -71,7 +71,7 @@ class Epochs(object):
         for kind, parsed in zip(['saccades', 'fixations', 'blinks'],
                                 discrete_inds):
             this_in = raw.discrete.get(kind, None)
-            if this_in:
+            if this_in is not None:
                 for this_id, values in parsed.iteritems():
                     this_id = (this_id if event_keys is None else
                                event_keys[this_id])
