@@ -1,0 +1,113 @@
+# Authors: Denis Engemann <d.engemann@fz-juelich.de>
+#
+# License: BSD (3-clause)
+
+import pandas as pd
+import copy
+import numpy as np
+from numpy.testing import assert_array_less
+
+
+class Epochs(object):
+    """ Create epoched data
+
+    Parameters
+    ----------
+    raw : instance of pylabparse.raw.Raw
+        The raw instance to create epochs from
+    events : ndarray (n_samples)
+        The events to construct epochs around.
+    tmin : float
+        The time window before a particular event in seconds.
+    tmax : float
+        The time window after a particular event in seconds.
+    """
+    def __init__(self, raw, events, event_id, tmin, tmax):
+        self.info = copy.deepcopy(raw.info)
+        self.event_id = event_id
+        self.tmin = tmin
+        self.tmax = tmax
+        data, times = raw[:]
+        if isinstance(event_id, dict):
+            my_event_id = event_id.vlaues()
+        elif np.isscalar(event_id):
+            my_event_id = [event_id]
+        sample_inds, saccade_inds, fixation_inds, blink_inds =\
+            [{k: [] for k in my_event_id} for _ in '....']
+        containers = [saccade_inds, fixation_inds, blink_inds]
+
+        keep_idx = []
+        ii = 0
+        min_samples = []
+        for event, this_id in events:
+            if this_id not in my_event_id:
+                continue
+            this_time = times[event]
+            this_tmin, this_tmax = this_time + tmin, this_time + tmax
+            inds_min, inds_max = raw.time_as_index([this_tmin, this_tmax])
+            if max([inds_min, inds_max]) >= len(raw._samples):
+                break
+            inds = np.arange(inds_min, inds_max)
+            min_samples.append(inds.shape[0])
+
+            sample_inds[this_id].append([inds, ii])
+
+            for etype, container in zip(raw.info['event_types'], containers):
+                df = getattr(raw, etype)
+                stime, etime = df[['stime', 'etime']].values.T
+                assert_array_less(stime, etime)
+                event_in_window = np.where((stime >= this_tmin) &
+                                           (etime <= this_tmax))
+                container[this_id].append(event_in_window[0])
+            keep_idx.append(ii)
+            ii += 1
+        self.container = containers
+        self.events = events[keep_idx]
+        min_samples = np.min(min_samples)
+
+        _samples = []
+        c = np.concatenate
+        track_inds = []
+        for this_id, values in sample_inds.iteritems():
+            ind, _ = zip(*values)
+            ind = [i[:min_samples] for i in ind]
+            df = raw._samples.iloc[c(ind)]
+            df['event_id'] = this_id
+            count = c([np.repeat(v, min_samples) for _, v in values])
+            df['epoch_idx'] = count
+            _samples.append(df)
+            track_inds.extend([len(i) for i in ind])
+
+        sort_k = 'epoch_idx'  # important for multiple conditions
+        # ignore index to allow for sorting + keep unique values
+        self._samples = pd.concat(_samples, ignore_index=True)
+        self._samples.sort(sort_k, inplace=True)
+        assert set(track_inds) == set([min_samples])
+        n_samples = min_samples
+        n_epochs = len(track_inds)
+        self._samples['times'] = np.tile(np.linspace(tmin, tmax, n_samples),
+                                         n_epochs)
+        self._n_times = min_samples
+
+        self._samples.set_index(['epoch_idx', 'times'], drop=True,
+                                inplace=True, verify_integrity=True)
+
+        # self._saccades = []
+        # for this_id, ind in saccade_inds.items():
+        #     df = raw._saccades.iloc[np.concatenate(ind)]
+        #     df['event_id'] = this_id
+        #     self._saccades.append(df)
+        # self._fixations = []
+        # for this_id, ind in fixation_inds.items():
+        #     df = raw._fixations.iloc[np.concatenate(ind)]
+        #     df['event_id'] = this_id
+        #     self._fixations.append(df)
+        # self._blinks = []
+        # for this_id, ind in blink_inds.items():
+        #     df = raw._blinks.iloc[np.concatenate(ind)]
+        #     df['event_id'] = this_id
+        #     self._blinks.append(df)
+
+    def __repr__(self):
+        s = '<Epochs | {0} events | tmin: {1} tmax: {2}>'
+        return s.format(len(self.events), self.tmin, self.tmax)
