@@ -15,7 +15,7 @@ events = plp.find_custom_events(raw, 'user-event', event_id=1)
 
 raw.plot_heatmap(start=10., stop=85.)
 
-tmin, tmax, event_id = -1.5, 2.0, 1
+tmin, tmax, event_id = -0.5, 1.5, 1
 
 epochs = plp.Epochs(raw, events=events, event_id=event_id, tmin=tmin,
                     tmax=tmax)
