@@ -28,8 +28,10 @@ class Epochs(object):
         self.tmin = tmin
         self.tmax = tmax
         data, times = raw[:]
+        event_keys = None
         if isinstance(event_id, dict):
-            my_event_id = event_id.vlaues()
+            my_event_id = event_id.values()
+            event_keys = {v: k for k, v in event_id.items()}
         elif np.isscalar(event_id):
             my_event_id = [event_id]
         sample_inds, saccade_inds, fixation_inds, blink_inds =\
@@ -72,6 +74,7 @@ class Epochs(object):
             ind, _ = zip(*values)
             ind = [i[:min_samples] for i in ind]
             df = raw._samples.iloc[c(ind)]
+            this_id = this_id if event_keys is None else event_keys[this_id]
             df['event_id'] = this_id
             count = c([np.repeat(v, min_samples) for _, v in values])
             df['epoch_idx'] = count
@@ -111,3 +114,9 @@ class Epochs(object):
     def __repr__(self):
         s = '<Epochs | {0} events | tmin: {1} tmax: {2}>'
         return s.format(len(self.events), self.tmin, self.tmax)
+
+    def next(self):
+        return NotImplemented
+
+    def __iter__(self):
+        return NotImplemented
