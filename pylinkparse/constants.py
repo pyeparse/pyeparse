@@ -26,3 +26,5 @@ EDF.FIX_DTYPES = ('O O float64 float64 float64 float64 float64 int64 '
 
 EDF.SAC_DTYPES = ('O O float64 float64 float64 float64 float64 '
                   'float64 float64 float64 int64 float64 float64')
+
+EDF.MERGE = 'event eye stime etime dur sxp exp eyp syp ps ampl pvl resx resy'
