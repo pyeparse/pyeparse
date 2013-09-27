@@ -5,7 +5,7 @@
 import numpy as np
 
 
-def find_custom_events(raw, pattern, prefix=True, sep=' '):
+def find_custom_events(raw, pattern, event_id, prefix=True, sep=' '):
     """Find arbitrary messages
     Parameters
     ----------
@@ -13,6 +13,8 @@ def find_custom_events(raw, pattern, prefix=True, sep=' '):
         the raw file to find events in.
     pattern : str
         A substring to be matched
+    event_id : int
+        The event id to use.
     prefix : bool
         Whether the message includes a prefix, e.g., MSG or
         directly begins with the time sample.
@@ -34,4 +36,5 @@ def find_custom_events(raw, pattern, prefix=True, sep=' '):
     events = np.array(events, dtype='f8')
     events -= raw._t_zero
     events /= 1e3
-    return np.nonzero(np.in1d(raw._samples['time'], events))[0]
+    out = np.nonzero(np.in1d(raw._samples['time'], events))[0]
+    return np.c_[out, np.repeat(event_id, len(out))]
