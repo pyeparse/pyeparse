@@ -105,7 +105,7 @@ class Raw(object):
         return '<Raw | {0} samples>'.format(len(self._samples))
 
     def __getitem__(self, idx):
-        data = self._samples[['xpos', 'ypos', 'ps']].values[idx]
+        data = self._samples[['xpos', 'ypos', 'ps']].iloc[idx]
         times = self._samples['time']
         return data, times
 

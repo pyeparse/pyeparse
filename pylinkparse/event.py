@@ -34,5 +34,4 @@ def find_custom_events(raw, pattern, prefix=True, sep=' '):
     events = np.array(events, dtype='f8')
     events -= raw._t_zero
     events /= 1e3
-    print events
     return np.nonzero(np.in1d(raw._samples['time'], events))[0]
