@@ -9,15 +9,15 @@ from numpy.testing import assert_array_less
 
 
 class Discrete(list):
-    """ Simple Container for discrete data
+    """ Simple Container for discrete data based on Python list
     """
 
-    def __init__(self, kind='<NA>', *args):
-        self.kind = kind
+    def __init__(self):
+        pass
 
     def __repr__(self):
-        s = '<Discrete | kind: {0} ({1})>'
-        return s.format(self.kind, len([d for d in self if d]))
+        s = '<Discrete | {0} epochs; {1} events>'
+        return s.format(len(self), sum([len(d) for d in self if d]))
 
 
 class Epochs(object):
@@ -86,7 +86,7 @@ class Epochs(object):
                 for this_id, values in parsed.iteritems():
                     this_id = (this_id if event_keys is None else
                                event_keys[this_id])
-                    this_discrete = Discrete(kind=kind)
+                    this_discrete = Discrete()
                     for ind in zip(*values)[0]:
                         if ind.any().any():
                             df = this_in.iloc[ind]
@@ -137,35 +137,3 @@ class Epochs(object):
 
     def __getitem__(self, idx):
         return NotImplemented
-
-
-def merge_parsed_data(epochs):
-    # put parsed events in data table
-    d['stime'] = np.nan
-    d['etime'] = np.nan
-    d['dur'] = np.nan
-    d['sxp'] = np.nan
-    d['exp'] = np.nan
-    d['eyp'] = np.nan
-    d['syp'] = np.nan
-    d['ampl'] = np.nan
-    d['pvl'] = np.nan
-    d['resx'] = np.nan
-    d['resy'] = np.nan
-
-    for kind, parsed in zip(['_saccades', '_fixations', '_blinks'],
-                            discrete_inds):
-        this_in = getattr(raw, kind, None)
-        columns = this_in.columns
-        for this_id, values in parsed.iteritems():
-            for ii, ind in zip(set(d.index.labels[0]), values):
-                this_out = d.loc[ii]
-                if np.any(ind):
-                    for iii in ind:
-                        a = this_out['time'] > this_in.iloc[iii]['stime']
-                        b = this_out['time'] < this_in.iloc[iii]['etime']
-                        here = np.where(a & b)
-                        for column in columns:
-                            val = this_in[column][0]
-                            this_out[column].iloc[here] = val
-
