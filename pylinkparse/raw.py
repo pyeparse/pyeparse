@@ -82,16 +82,20 @@ class Raw(object):
         self._samples = _assemble_data(samples, columns=EDF.SAMPLE.split())
         [self._samples.pop(k) for k in ['N1', 'N2']]
         del samples
+        self.info['event_types'] = []
         if saccades:
             self._saccades = _assemble_data(saccades, columns=EDF.SAC.split())
             del saccades
+            self.info['event_types'].append('_saccades')
         if fixations:
             self._fixations = _assemble_data(fixations,
                                              columns=EDF.FIX.split())
             del fixations
+            self.info['event_types'].append('_fixations')
         if blinks:
             self._blinks = _assemble_data(blinks, columns=EDF.BLINK.split())
             del blinks
+            self.info['event_types'].append('_blinks')
 
         # set t0 to 0 and scale to seconds
         self._t_zero = self._samples['time'][0]

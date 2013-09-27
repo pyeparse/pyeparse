@@ -3,7 +3,6 @@
 # License: BSD (3-clause)
 
 import pylinkparse as plp
-import pylab as pl
 
 fname = '../pylinkparse/tests/data/test_raw.asc'
 
@@ -18,4 +17,4 @@ raw.plot_heatmap(start=10., stop=85.)
 
 tmin, tmax = -0.2, 1.6
 
-# epochs = plp.Epochs(raw, events=events, tmin=tmin, tmax=tmax)
+epochs = plp.Epochs(raw, events=events, tmin=tmin, tmax=tmax)
