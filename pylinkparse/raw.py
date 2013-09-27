@@ -3,7 +3,7 @@
 # License: BSD (3-clause)
 
 from .constants import EDF
-from .viz import plot_calibration
+from .viz import plot_calibration, plot_heatmap_raw
 import pandas as pd
 import numpy as np
 from datetime import datetime
@@ -74,6 +74,9 @@ class Raw(object):
                     self.info['serial'] = _extract_sys_info(line)
                 elif 'CAMERA_CONFIG:' in line:
                     self.info['camera_config'] = _extract_sys_info(line)
+                elif 'DISPLAY_COORDS' in line:
+                    self.info['screen_coords'] = np.array(line.split()[-2:],
+                                                          dtype='i8')
 
         self.info['validation'] = pd.DataFrame(validation, dtype=np.float64)
         self._samples = _assemble_data(samples, columns=EDF.SAMPLE.split())
@@ -126,3 +129,41 @@ class Raw(object):
         """
         return plot_calibration(raw=self, title=title, show=show)
 
+    def plot_heatmap(self, start=None, stop=None, cmap=None,
+                     title=None, show=True):
+        """ Plot heatmap of X/Y positions on canvas, e.g., screen
+
+        Parameters
+        ----------
+        start : float | None
+            The canvas width.
+        stop : float | None
+            The canvas height.
+        title : str
+            The title to be displayed.
+        show : bool
+            Whether to show the figure or not.
+
+        Returns
+        -------
+        fig : instance of matplotlib.figure.Figure
+            The resulting figure object
+        """
+        plot_heatmap_raw(raw=self, start=start, stop=stop, cmap=cmap,
+                         title=title, show=show)
+
+    def time_as_index(self, times):
+        """Convert time to indices
+
+        Parameters
+        ----------
+        times : list-like | float | int
+            List of numbers or a number representing points in time.
+
+        Returns
+        -------
+        index : ndarray
+            Indices corresponding to the times supplied.
+        """
+        index = np.atleast_1d(times) * self.info['sfreq']
+        return index.astype(int)

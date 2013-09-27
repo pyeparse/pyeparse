@@ -50,6 +50,8 @@ def plot_heatmap(xdata, ydata, width, height, cmap=None,
         The canvas width.
     height : int
         The canvas height.
+    show : bool
+        Whether to show the figure or not.
 
     Returns
     -------
@@ -77,3 +79,51 @@ def plot_heatmap(xdata, ydata, width, height, cmap=None,
     if show:
         pl.show()
     return fig, canvas
+
+
+def plot_heatmap_raw(raw, start=None, stop=None, cmap=None,
+                     title=None, show=True):
+    """ Plot heatmap of X/Y positions on canvas, e.g., screen
+
+    Parameters
+    ----------
+    raw : instance of pylinkparse raw
+        The raw object to be visualized
+    start : float | None
+        The canvas width.
+    stop : float | None
+        The canvas height.
+    title : str
+        The title to be displayed.
+    show : bool
+        Whether to show the figure or not.
+
+    Returns
+    -------
+    fig : instance of matplotlib.figure.Figure
+        The resulting figure object
+    """
+    import pylab as pl
+    k = 'screen_coords'
+    if k not in raw.info:
+        raise RuntimeError('Raw object does not include '
+                           'screem coordinates.')
+    width, height = raw.info[k]
+    if isinstance(start, float):
+        start = raw.time_as_index([start])
+    if isinstance(stop, float):
+        stop = raw.time_as_index([stop])
+    data, times = raw[start:stop]
+    xdata, ydata = data.iloc[:, :2].values.T
+    fig, _ = plot_heatmap(xdata=xdata, ydata=ydata, width=width,
+                          height=height, cmap=cmap, show=False)
+
+    if title is None:
+        tstart, tstop = times.iloc[start:stop].iloc[[0, -1]]
+        title = 'Raw data | {0} - {1} seconds'.format(tstart, tstop)
+    pl.title(title)
+    pl.xlabel('X position (px)')
+    pl.ylabel('y position (px)')
+    if show:
+        pl.show()
+    return fig
