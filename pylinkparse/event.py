@@ -5,6 +5,18 @@
 import numpy as np
 
 
+class Discrete(list):
+    """ Simple Container for discrete data based on Python list
+    """
+
+    def __init__(self):
+        pass
+
+    def __repr__(self):
+        s = '<Discrete | {0} epochs; {1} events>'
+        return s.format(len(self), sum(len(d) for d in self if d))
+
+
 def find_custom_events(raw, pattern, event_id, prefix=True, sep=' '):
     """Find arbitrary messages
     Parameters

@@ -100,7 +100,7 @@ class Raw(object):
         key = ['stime', 'etime']
         for kind in ['samples', 'saccades', 'fixations', 'blinks']:
             df = d.get(kind, None)
-            if df:
+            if df is not None:
                 df[key] -= self._t_zero
                 df[key] /= 1e3
                 df['dur'] /= 1e3

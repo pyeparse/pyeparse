@@ -6,18 +6,7 @@ import pandas as pd
 import copy
 import numpy as np
 from numpy.testing import assert_array_less
-
-
-class Discrete(list):
-    """ Simple Container for discrete data based on Python list
-    """
-
-    def __init__(self):
-        pass
-
-    def __repr__(self):
-        s = '<Discrete | {0} epochs; {1} events>'
-        return s.format(len(self), sum([len(d) for d in self if d]))
+from .event import Discrete
 
 
 class Epochs(object):
