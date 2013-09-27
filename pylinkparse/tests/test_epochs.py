@@ -14,10 +14,10 @@ def test_epochs_io():
     epochs = Epochs(raw, events, event_id, tmin, tmax)
     print epochs  # test repr works
     assert_equal(len(epochs.events), 2)
-    assert_equal(epochs._samples.shape[0] / epochs._n_times,
+    assert_equal(epochs.data.shape[0] / epochs._n_times,
                  len(epochs.events))
 
     epochs = Epochs(raw, events, dict(a=999, b=77), tmin, tmax)
     assert_equal(len(epochs.events), 3)
-    assert_equal(epochs._samples.shape[0] / epochs._n_times,
+    assert_equal(epochs.data.shape[0] / epochs._n_times,
                  len(epochs.events))

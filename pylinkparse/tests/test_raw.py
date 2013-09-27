@@ -13,23 +13,20 @@ def test_raw_io():
     print raw  # test repr works
 
     # tests dtypes are parsed correctly that is double only
-    dtypes = raw._samples.dtypes.unique()
+    dtypes = raw.samples.dtypes.unique()
     assert_equal(len(dtypes), 1)
     assert_equal(dtypes[0], np.float64)
 
-    for actual, desired in zip(raw._saccades.dtypes, EDF.SAC_DTYPES.split()):
-        assert_equal(actual, np.dtype(desired))
+    for kind, values in raw.discrete.items():
+        columns = {'saccades': EDF.SAC_DTYPES,
+                   'fixations': EDF.FIX_DTYPES,
+                   'blinks': EDF.BLINK_DTYPES}[kind]
+        for actual, desired in zip(values.dtypes, columns.split()):
+            assert_equal(actual, np.dtype(desired))
 
-    for actual, desired in zip(raw._blinks.dtypes, EDF.BLINK_DTYPES.split()):
-        assert_equal(actual, np.dtype(desired))
-
-    for actual, desired in zip(raw._fixations.dtypes, EDF.FIX_DTYPES.split()):
-        assert_equal(actual, np.dtype(desired))
-
-    for attr in ['_samples', '_saccades', '_fixations', '_blinks']:
-        keys = ['time'] if attr == '_samples' else ['stime', 'etime']
-        for key in keys:
-            assert_true(getattr(raw, attr)[key][0] < 1.0)
+    for kind in ['saccades', 'fixations', 'blinks']:
+        assert_true(raw.discrete[kind]['stime'][0] < 1.0)
+    assert_true(raw.samples['time'][0] < 1.0)
 
 
 def tets_access_data():

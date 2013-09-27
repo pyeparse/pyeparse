@@ -6,7 +6,18 @@ import pandas as pd
 import copy
 import numpy as np
 from numpy.testing import assert_array_less
-from .constants import EDF
+
+
+class Discrete(list):
+    """ Simple Container for discrete data
+    """
+
+    def __init__(self, kind='<NA>', *args):
+        self.kind = kind
+
+    def __repr__(self):
+        s = '<Discrete | kind: {0} ({1})>'
+        return s.format(self.kind, len([d for d in self if d]))
 
 
 class Epochs(object):
@@ -36,10 +47,9 @@ class Epochs(object):
         elif np.isscalar(event_id):
             my_event_id = [event_id]
 
-        sample_inds, saccade_inds, fixation_inds, blink_inds =\
-            [{k: [] for k in my_event_id} for _ in '....']
-        parsed_inds = [saccade_inds, fixation_inds, blink_inds]
-
+        discrete_inds = [{k: [] for k in my_event_id} for _ in '....']
+        sample_inds = discrete_inds.pop(0)
+        saccade_inds, fixation_inds, blink_inds = discrete_inds
         keep_idx = []
         ii = 0
         min_samples = []
@@ -49,25 +59,43 @@ class Epochs(object):
             this_time = times[event]
             this_tmin, this_tmax = this_time + tmin, this_time + tmax
             inds_min, inds_max = raw.time_as_index([this_tmin, this_tmax])
-            if max([inds_min, inds_max]) >= len(raw._samples):
+            if max([inds_min, inds_max]) >= len(raw.samples):
                 break
             inds = np.arange(inds_min, inds_max)
             min_samples.append(inds.shape[0])
 
             sample_inds[this_id].append([inds, ii])
-
-            for etype, parsed in zip(raw.info['event_types'], parsed_inds):
-                df = getattr(raw, etype)
+            for kind, parsed in zip(raw.info['event_types'], discrete_inds):
+                df = raw.discrete.get(kind, kind)
+                # import pdb;pdb.set_trace()
                 stime, etime = df[['stime', 'etime']].values.T
                 assert_array_less(stime, etime)
                 event_in_window = np.where((stime >= this_tmin) &
                                            (etime <= this_tmax))
-                parsed[this_id].append(event_in_window[0])
+                parsed[this_id].append([event_in_window[0], ii])
             keep_idx.append(ii)
             ii += 1
 
         self.events = events[keep_idx]
         min_samples = np.min(min_samples)
+
+        for kind, parsed in zip(['saccades', 'fixations', 'blinks'],
+                                discrete_inds):
+            this_in = raw.discrete.get(kind, None)
+            if this_in:
+                for this_id, values in parsed.iteritems():
+                    this_id = (this_id if event_keys is None else
+                               event_keys[this_id])
+                    this_discrete = Discrete(kind=kind)
+                    for ind in zip(*values)[0]:
+                        if ind.any().any():
+                            df = this_in.iloc[ind]
+                            df['event_id'] = this_id
+                            this_discrete.append(df)
+                        else:
+                            this_discrete.append([])
+
+                    setattr(self, kind + '_', this_discrete)
 
         _samples = []
         c = np.concatenate
@@ -75,7 +103,7 @@ class Epochs(object):
         for this_id, values in sample_inds.iteritems():
             ind, _ = zip(*values)
             ind = [i[:min_samples] for i in ind]
-            df = raw._samples.iloc[c(ind)]
+            df = raw.samples.iloc[c(ind)]
             this_id = this_id if event_keys is None else event_keys[this_id]
             df['event_id'] = this_id
             count = c([np.repeat(v, min_samples) for _, v in values])
@@ -91,44 +119,11 @@ class Epochs(object):
         n_samples = min_samples
         n_epochs = len(track_inds)
         self.times = np.linspace(tmin, tmax, n_samples)
-        self.data['times'] = np.tile(times, n_epochs)
+        self.data['times'] = np.tile(self.times, n_epochs)
         self._n_times = min_samples
 
         self.data.set_index(['epoch_idx', 'times'], drop=True,
                             inplace=True, verify_integrity=True)
-
-        # intialize big table
-        d = self.data
-        d['event'] = None
-        d['eye'] = None
-        d['stime'] = np.nan
-        d['etime'] = np.nan
-        d['dur'] = np.nan
-        d['sxp'] = np.nan
-        d['exp'] = np.nan
-        d['eyp'] = np.nan
-        d['syp'] = np.nan
-        d['ampl'] = np.nan
-        d['pvl'] = np.nan
-        d['resx'] = np.nan
-        d['resy'] = np.nan
-
-        # put parsed events in data table
-        for kind, parsed in zip(['_saccades', '_fixations', '_blinks'],
-                                parsed_inds):
-            this_in = getattr(raw, kind, None)
-            columns = this_in.columns
-            for this_id, values in parsed.iteritems():
-                for ii, ind in zip(set(d.index.labels[0]), values):
-                    this_out = d.loc[ii]
-                    if np.any(ind):
-                        for iii in ind:
-                            a = this_out['time'] > this_in.iloc[iii]['stime']
-                            b = this_out['time'] < this_in.iloc[iii]['etime']
-                            here = np.where(a & b)
-                            for column in columns:
-                                val = this_in[column][0]
-                                this_out[column].iloc[here] = val
 
     def __repr__(self):
         s = '<Epochs | {0} events | tmin: {1} tmax: {2}>'
@@ -139,3 +134,38 @@ class Epochs(object):
 
     def __iter__(self):
         return NotImplemented
+
+    def __getitem__(self, idx):
+        return NotImplemented
+
+
+def merge_parsed_data(epochs):
+    # put parsed events in data table
+    d['stime'] = np.nan
+    d['etime'] = np.nan
+    d['dur'] = np.nan
+    d['sxp'] = np.nan
+    d['exp'] = np.nan
+    d['eyp'] = np.nan
+    d['syp'] = np.nan
+    d['ampl'] = np.nan
+    d['pvl'] = np.nan
+    d['resx'] = np.nan
+    d['resy'] = np.nan
+
+    for kind, parsed in zip(['_saccades', '_fixations', '_blinks'],
+                            discrete_inds):
+        this_in = getattr(raw, kind, None)
+        columns = this_in.columns
+        for this_id, values in parsed.iteritems():
+            for ii, ind in zip(set(d.index.labels[0]), values):
+                this_out = d.loc[ii]
+                if np.any(ind):
+                    for iii in ind:
+                        a = this_out['time'] > this_in.iloc[iii]['stime']
+                        b = this_out['time'] < this_in.iloc[iii]['etime']
+                        here = np.where(a & b)
+                        for column in columns:
+                            val = this_in[column][0]
+                            this_out[column].iloc[here] = val
+

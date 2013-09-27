@@ -79,41 +79,39 @@ class Raw(object):
                                                           dtype='i8')
 
         self.info['validation'] = pd.DataFrame(validation, dtype=np.float64)
-        self._samples = _assemble_data(samples, columns=EDF.SAMPLE.split())
-        [self._samples.pop(k) for k in ['N1', 'N2']]
+        self.samples = _assemble_data(samples, columns=EDF.SAMPLE.split())
+        [self.samples.pop(k) for k in ['N1', 'N2']]
+
         del samples
         self.info['event_types'] = []
-        if saccades:
-            self._saccades = _assemble_data(saccades, columns=EDF.SAC.split())
-            del saccades
-            self.info['event_types'].append('_saccades')
-        if fixations:
-            self._fixations = _assemble_data(fixations,
-                                             columns=EDF.FIX.split())
-            del fixations
-            self.info['event_types'].append('_fixations')
-        if blinks:
-            self._blinks = _assemble_data(blinks, columns=EDF.BLINK.split())
-            del blinks
-            self.info['event_types'].append('_blinks')
+        d = self.discrete = {}
+        for kind in ['saccades', 'fixations', 'blinks']:
+            data = eval(kind)
+            columns = {'saccades': EDF.SAC, 'fixations': EDF.FIX,
+                       'blinks': EDF.BLINK}[kind]
+            if data:
+                d[kind] = _assemble_data(data, columns=columns.split())
+                del data
 
         # set t0 to 0 and scale to seconds
-        self._t_zero = self._samples['time'][0]
-        for attr in ['_samples', '_saccades', '_fixations', '_blinks']:
-            df = getattr(self, attr, None)
+        self._t_zero = self.samples['time'][0]
+        self.samples['time'] -= self._t_zero
+        self.samples['time'] /= 1e3
+        key = ['stime', 'etime']
+        for kind in ['samples', 'saccades', 'fixations', 'blinks']:
+            df = d.get(kind, None)
             if df:
-                key = 'time' if attr == '_samples' else ['stime', 'etime']
                 df[key] -= self._t_zero
                 df[key] /= 1e3
-                if key != 'time':
-                    df['dur'] /= 1e3
+                df['dur'] /= 1e3
+                self.info['event_types'].append(kind)
 
     def __repr__(self):
-        return '<Raw | {0} samples>'.format(len(self._samples))
+        return '<Raw | {0} samples>'.format(len(self.samples))
 
     def __getitem__(self, idx):
-        data = self._samples[['xpos', 'ypos', 'ps']].iloc[idx]
-        times = self._samples['time']
+        data = self.samples[['xpos', 'ypos', 'ps']].iloc[idx]
+        times = self.samples['time']
         return data, times
 
     def plot_calibration(self, title='Calibration', show=True):

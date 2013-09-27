@@ -4,6 +4,7 @@
 
 import numpy as np
 
+
 def plot_calibration(raw, title='Calibration', show=True):
     """Visualize calibration
 
