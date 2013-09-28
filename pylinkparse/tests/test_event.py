@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from numpy.testing import assert_equal
+from numpy.testing import assert_equal, assert_array_equal
 from pylinkparse import Raw
 from pylinkparse.event import find_custom_events, Discrete
 
@@ -15,6 +15,8 @@ def test_find_custom_events():
     events = find_custom_events(raw, 'user-event', 1)
     assert_equal(len(events), 25)
     assert_equal(set(events[:, 1]), set([1]))
+    events2 = raw.find_events('user-event', 1)
+    assert_array_equal(events, events2)
 
 
 def test_discrete():
