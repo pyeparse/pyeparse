@@ -16,12 +16,19 @@ class Epochs(object):
     ----------
     raw : instance of pylabparse.raw.Raw
         The raw instance to create epochs from
-    events : ndarray (n_samples)
+    events : ndarray (n_epochs)
         The events to construct epochs around.
+    event_id : int
+        The event ID to use.
     tmin : float
         The time window before a particular event in seconds.
     tmax : float
         The time window after a particular event in seconds.
+
+    Returns
+    -------
+    epochs : instance of Epochs
+        The epoched dataset.
     """
     def __init__(self, raw, events, event_id, tmin, tmax):
         self.info = copy.deepcopy(raw.info)
@@ -36,7 +43,7 @@ class Epochs(object):
         elif np.isscalar(event_id):
             my_event_id = [event_id]
 
-        discrete_inds = [{k: [] for k in my_event_id} for _ in '....']
+        discrete_inds = [{kk: [] for kk in my_event_id} for _ in '....']
         sample_inds = discrete_inds.pop(0)
         saccade_inds, fixation_inds, blink_inds = discrete_inds
         keep_idx = []
@@ -95,7 +102,7 @@ class Epochs(object):
             df = raw.samples.iloc[c(ind)]
             this_id = this_id if event_keys is None else event_keys[this_id]
             df['event_id'] = this_id
-            count = c([np.repeat(v, min_samples) for _, v in values])
+            count = c([np.repeat(vv, min_samples) for _, vv in values])
             df['epoch_idx'] = count
             _samples.append(df)
             track_inds.extend([len(i) for i in ind])
