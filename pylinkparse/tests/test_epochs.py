@@ -40,15 +40,23 @@ def test_epochs_io():
         epochs2 = epochs[0]
         assert_equal(len(epochs2.events), 1)
         assert_equal(set(epochs2.events[:, -1]), {999})
+        desired = len(epochs2.events) * len(epochs.times)
+        assert_equal(epochs2.data_frame.shape[0], desired)
 
         epochs2 = epochs[[0, 1]]
         assert_equal(len(epochs2.events), 2)
         assert_equal(set(epochs2.events[:, -1]), {999})
+        desired = len(epochs2.events) * len(epochs.times)
+        assert_equal(epochs2.data_frame.shape[0], desired)
 
         epochs2 = epochs['a']
         assert_equal(len(epochs2.events), 2)
         assert_equal(set(epochs2.events[:, -1]), {999})
+        desired = len(epochs2.events) * len(epochs.times)
+        assert_equal(epochs2.data_frame.shape[0], desired)
 
         epochs2 = epochs[slice(1, 3)]
         assert_equal(len(epochs2.events), 2)
         assert_equal(set(epochs2.events[:, -1]), {999, 77})
+        desired = len(epochs2.events) * len(epochs.times)
+        assert_equal(epochs2.data_frame.shape[0], desired)

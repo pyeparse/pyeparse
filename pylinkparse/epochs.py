@@ -4,6 +4,7 @@
 
 import pandas as pd
 import copy
+from functools import wraps
 import numpy as np
 from numpy.testing import assert_array_less
 from .event import Discrete
@@ -169,7 +170,8 @@ class Epochs(object):
         elif isinstance(idx, slice):
             idx = np.arange(*idx.indices(idx.stop))
 
-        out._data = out._data.ix[idx]
+        midx = [i for i in out._data.index if i[0] in idx]
+        out._data = out._data.ix[midx]
         out.events = out.events[idx]
         for discrete in self.info['discretes']:
             disc = vars(self)[discrete]

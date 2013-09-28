@@ -24,3 +24,18 @@ def safe_bool(obj):
     else:
         ret = obj
     return bool(ret)
+
+
+def create_chunks(sequence, size):
+    """Generate chunks from a sequence
+
+    Note. copied from MNE-Python
+
+    Parameters
+    ----------
+    sequence : iterable
+        Any iterable object
+    size : int
+        The chunksize to be returned
+    """
+    return (sequence[p:p + size] for p in xrange(0, len(sequence), size))
