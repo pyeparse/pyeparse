@@ -1,6 +1,6 @@
 import numpy as np
 from os import path as op
-from numpy.testing import assert_equal
+from numpy.testing import assert_equal, assert_array_equal
 from nose.tools import assert_true
 from pylinkparse import Raw, Epochs
 import glob
@@ -60,3 +60,10 @@ def test_epochs_io():
         assert_equal(set(epochs2.events[:, -1]), {999, 77})
         desired = len(epochs2.events) * len(epochs.times)
         assert_equal(epochs2.data_frame.shape[0], desired)
+
+        data1 = epochs[0].data
+        data2 = epochs.data_frame.ix[0, epochs.info['data_cols']].values
+        data2 = data2.reshape(1,
+                              len(epochs.times),
+                              len(epochs.info['data_cols']))
+        assert_array_equal(data1, np.transpose(data2, [0, 2, 1]))

@@ -149,8 +149,8 @@ class Epochs(object):
     @property
     def data(self):
         out = self._data[self.info['data_cols']].values
-        out = out.reshape(self._n_epochs,
-                          self._n_times,
+        out = out.reshape(len(self.events),
+                          len(self.times),
                           len(self.info['data_cols']))
         return np.transpose(out, [0, 2, 1])
 
@@ -176,7 +176,6 @@ class Epochs(object):
         for discrete in self.info['discretes']:
             disc = vars(self)[discrete]
             disc = Discrete(disc[k] for k in idx)
-
         return out
 
     def copy(self):

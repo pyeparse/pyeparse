@@ -178,7 +178,8 @@ def _draw_epochs_axes(epoch_idx, data, times, axes,
                       title_str, axes_handler):
     """Aux functioin"""
     this = axes_handler[0]
-
+    data = np.ma.masked_invalid(data)
+    print data.min(), data.max()
     for ii, data_, ax in zip(epoch_idx, data, axes):
         [l.set_data(times, d) for l, d in zip(ax.lines, data_)]
         if title_str is not None:
@@ -186,6 +187,7 @@ def _draw_epochs_axes(epoch_idx, data, times, axes,
         ax.set_ylim(data.min(), data.max())
         ax.set_yticks([])
         ax.set_xticks([])
+        ax.get_figure().canvas.draw()
         if vars(ax)[this]['reject'] is True:
             #  memorizing reject
             [l.set_color((0.8, 0.8, 0.8)) for l in ax.lines]
@@ -198,6 +200,7 @@ def _draw_epochs_axes(epoch_idx, data, times, axes,
                 if vars(ax).get(k, {}).get('reject', None) is True:
                     [l.set_color('k') for l in ax.lines]
                     ax.get_figure().canvas.draw()
+                    print 'finally!!!\n' * 100
                     break
 
 
@@ -216,7 +219,7 @@ def _epochs_navigation_onclick(event, params):
         pl.close(p['fig'])
         pl.close(event.inaxes.get_figure())
 
-    if here is not None:
+    if here is not None and len(p['axes_handler']) > 1:
         p['idx_handler'].rotate(here)
         p['axes_handler'].rotate(here)
         this_idx = p['idx_handler'][0]
