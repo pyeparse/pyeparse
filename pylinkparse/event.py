@@ -18,8 +18,42 @@ class Discrete(list):
         return s.format(len(self), sum(len(d) for d in self if safe_bool(d)))
 
 
+def find_events(raw, pattern, event_id):
+    """Find messages already parsed
+
+    Parameters
+    ----------
+    raw : instance of pylinkparse.raw.Raw
+        the raw file to find events in.
+    pattern : str | callable
+        A substring to be matched or a callable that matches
+        a string, for example ``lambda x: 'my-message' in x``
+    event_id : int
+        The event id to use.
+
+    Returns
+    -------
+    idx : instance of numpy.ndarray (times, event_id)
+        The indices found.
+    """
+    df = raw.discrete.get('messages', None)
+    if safe_bool(df):
+        if callable(pattern):
+            func = pattern
+        elif isinstance(pattern, basestring):
+            func = lambda x: pattern in x
+        else:
+            raise ValueError('Pattern not valid. Pass string or function')
+        idx = df.msg.apply(func).nonzero()[0]
+        out = np.nonzero(np.in1d(raw.samples['time'],
+                                 df['time'].ix[idx]))[0]
+        id_vector = np.repeat(event_id, len(idx)).astype(np.float64)
+        return np.c_[out, id_vector]
+
+
 def find_custom_events(raw, pattern, event_id, prefix=True, sep=' '):
-    """Find arbitrary messages
+    """Find arbitrary messages from raw data file
+
     Parameters
     ----------
     raw : instance of pylinkparse.raw.Raw

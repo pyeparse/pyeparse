@@ -8,6 +8,7 @@ from datetime import datetime
 from cStringIO import StringIO
 
 from .constants import EDF
+from .event import find_events
 from .viz import plot_calibration, plot_heatmap_raw
 
 
@@ -289,3 +290,23 @@ class Raw(object):
         """
         index = np.atleast_1d(times) * self.info['sfreq']
         return index.astype(int)
+
+    def find_events(self, pattern, event_id):
+        """Find parsed messages
+
+        Parameters
+        ----------
+        raw : instance of pylinkparse.raw.Raw
+            the raw file to find events in.
+        pattern : str | callable
+            A substring to be matched or a callable that matches
+            a string, for example ``lambda x: 'my-message' in x``
+        event_id : int
+            The event id to use.
+
+        Returns
+        -------
+        idx : instance of numpy.ndarray (times, event_id)
+            The indices found.
+        """
+        return find_events(raw=self, pattern=pattern, event_id=event_id)
