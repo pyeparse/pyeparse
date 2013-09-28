@@ -63,11 +63,9 @@ class Epochs(object):
             sample_inds[this_id].append([inds, ii])
             for kind, parsed in zip(raw.info['event_types'], discrete_inds):
                 df = raw.discrete.get(kind, kind)
-                # import pdb;pdb.set_trace()
-                stime, etime = df[['stime', 'etime']].values.T
-                assert_array_less(stime, etime)
-                event_in_window = np.where((stime >= this_tmin) &
-                                           (etime <= this_tmax))
+                assert_array_less(df['stime'], df['etime'])
+                event_in_window = np.where((df['stime'] >= this_tmin) &
+                                           (df['etime'] <= this_tmax))
                 parsed[this_id].append([event_in_window[0], ii])
             keep_idx.append(ii)
             ii += 1
@@ -117,19 +115,39 @@ class Epochs(object):
         self.times = np.linspace(tmin, tmax, n_samples)
         self.data['times'] = np.tile(self.times, n_epochs)
         self._n_times = min_samples
+        self._n_epochs = n_epochs
 
         self.data.set_index(['epoch_idx', 'times'], drop=True,
                             inplace=True, verify_integrity=True)
+        self._current = 0
 
     def __repr__(self):
         s = '<Epochs | {0} events | tmin: {1} tmax: {2}>'
         return s.format(len(self.events), self.tmin, self.tmax)
 
-    def next(self):
-        return NotImplemented
-
     def __iter__(self):
-        return NotImplemented
+        """To make iteration over epochs easy.
+        """
+        self._current = 0
+        return self
+
+    def next(self, return_event_id=False):
+        """To make iteration over epochs easy.
+        """
+
+        if self._current >= self._n_epochs:
+            raise StopIteration
+        epoch = self.data.ix[self._current]
+        epoch = epoch[self.info['data_cols']].values
+        self._current += 1
+        if not return_event_id:
+            return epoch
+        else:
+            return epoch, self.events[self._current - 1][-1]
 
     def __getitem__(self, idx):
-        return NotImplemented
+        out = self.data[self.info['data_cols']].values
+        out = out.reshape(self._n_epochs,
+                          self._n_times,
+                          len(self.info['data_cols']))
+        return np.transpose(out, [0, 2, 1])[idx]

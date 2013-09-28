@@ -144,6 +144,9 @@ class Raw(object):
                     df[key[:2]] -= self._t_zero
                     df[key] /= 1e3
                 self.info['event_types'].append(kind)
+        df = self.samples
+        self.info['data_cols'] = [kk for kk, dt in zip(df.columns, df.dtypes)
+                                  if dt != 'O' and kk != 'time']
 
     def _parse_header(self, header):
         """Parse EL header information"""
@@ -227,9 +230,7 @@ class Raw(object):
 
     def __getitem__(self, idx):
         df = self.samples
-        cols = [kk for kk, dt in zip(df.columns, df.dtypes)
-                if dt != 'O' and kk != 'time']
-        data = df[cols].values[idx]
+        data = df[self.info['data_cols']].values[idx]
         return data, df['time'].values
 
     def plot_calibration(self, title='Calibration', show=True):
