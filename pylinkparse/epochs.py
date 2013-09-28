@@ -85,7 +85,7 @@ class Epochs(object):
                     this_discrete = Discrete()
                     for ind in zip(*values)[0]:
                         if ind.any().any():
-                            df = this_in.iloc[ind]
+                            df = this_in.ix[ind]
                             df['event_id'] = this_id
                             this_discrete.append(df)
                         else:
@@ -99,7 +99,7 @@ class Epochs(object):
         for this_id, values in sample_inds.iteritems():
             ind, _ = zip(*values)
             ind = [i[:min_samples] for i in ind]
-            df = raw.samples.iloc[c(ind)]
+            df = raw.samples.ix[c(ind)]
             this_id = this_id if event_keys is None else event_keys[this_id]
             df['event_id'] = this_id
             count = c([np.repeat(vv, min_samples) for _, vv in values])

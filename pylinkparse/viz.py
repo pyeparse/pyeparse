@@ -115,12 +115,12 @@ def plot_heatmap_raw(raw, start=None, stop=None, cmap=None,
     if isinstance(stop, float):
         stop = raw.time_as_index([stop])
     data, times = raw[start:stop]
-    xdata, ydata = data.iloc[:, :2].values.T
+    xdata, ydata = data[:, :2].T
     fig, _ = plot_heatmap(xdata=xdata, ydata=ydata, width=width,
                           height=height, cmap=cmap, show=False)
 
     if title is None:
-        tstart, tstop = times.iloc[start:stop].iloc[[0, -1]]
+        tstart, tstop = times[start:stop][[0, -1]]
         title = 'Raw data | {0} - {1} seconds'.format(tstart, tstop)
     pl.title(title)
     pl.xlabel('X position (px)')

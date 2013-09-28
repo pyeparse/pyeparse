@@ -23,13 +23,13 @@ def _assemble_messages(lines):
     for line in lines:
         line = line.strip().split(None, 2)
         assert line[0] == 'MSG'
-        messages.append([line[1], line[2]])
-
+        messages.append(line[1:3])
     return pd.DataFrame(messages, columns=EDF.MESSAGE_FIELDS,
                         dtype=(np.float64, 'O'))
 
 
 def _extract_sys_info(line):
+    """Aux function for preprocessing sys info lines"""
     return line[line.find(':'):].strip(': \r\n')
 
 
@@ -226,9 +226,11 @@ class Raw(object):
         return '<Raw | {0} samples>'.format(len(self.samples))
 
     def __getitem__(self, idx):
-        data = self.samples[['xpos', 'ypos', 'ps']].iloc[idx]
-        times = self.samples['time']
-        return data, times
+        df = self.samples
+        cols = [kk for kk, dt in zip(df.columns, df.dtypes)
+                if dt != 'O' and kk != 'time']
+        data = df[cols].values[idx]
+        return data, df['time'].values
 
     def plot_calibration(self, title='Calibration', show=True):
         """Visualize calibration
