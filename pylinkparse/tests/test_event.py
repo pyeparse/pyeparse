@@ -24,3 +24,5 @@ def test_discrete():
     myrepr = '%s' % dis
     checksum = sum([int(d) for d in myrepr if d.isdigit()])
     assert_equal(checksum, 5 + len(dis))
+    dis = Discrete('aaaaa')
+    assert_equal(len(dis), 5)
