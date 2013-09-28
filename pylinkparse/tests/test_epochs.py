@@ -1,13 +1,13 @@
 import numpy as np
+from os import path as op
 from numpy.testing import assert_equal
 from pylinkparse import Raw, Epochs
 
-path = 'pylinkparse/tests/data/'
-fname = path + 'test_raw.asc'
+fname = op.join(op.split(__file__)[0], 'data', 'test_raw.asc')
 
 
 def test_epochs_io():
-    """Test essential basic IO functionality"""
+    """Test epochs IO functionality"""
     tmin, tmax, event_id = -0.5, 1.5, 999
     events = np.array([[1000, 999], [10000, 999], [12000, 77]])
     raw = Raw(fname)

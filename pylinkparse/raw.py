@@ -2,12 +2,13 @@
 #
 # License: BSD (3-clause)
 
+import numpy as np
+import pandas as pd
+from datetime import datetime
+from cStringIO import StringIO
+
 from .constants import EDF
 from .viz import plot_calibration, plot_heatmap_raw
-import pandas as pd
-import numpy as np
-from datetime import datetime
-from StringIO import StringIO
 
 
 def _assemble_data(lines, columns, sep='[ \t]+', na_values=['.']):
@@ -16,8 +17,52 @@ def _assemble_data(lines, columns, sep='[ \t]+', na_values=['.']):
                          na_values=na_values)
 
 
+def _assemble_messages(lines):
+    """Aux function for dealing with messages (sheesh)"""
+    messages = list()
+    for line in lines:
+        line = line.strip().split(None, 2)
+        assert line[0] == 'MSG'
+        messages.append([line[1], line[2]])
+
+    return pd.DataFrame(messages, columns=EDF.MESSAGE_FIELDS,
+                        dtype=(np.float64, 'O'))
+
+
 def _extract_sys_info(line):
-    return line[line.find(':'):].strip(': \n')
+    return line[line.find(':'):].strip(': \r\n')
+
+
+def _get_fields(line):
+    line = line.strip().split()
+    if line[0] not in ['SAMPLES', 'EVENTS']:
+        raise RuntimeError('Unknown type "%s" not EVENTS or SAMPLES' % line[0])
+    assert line[1] == 'GAZE'
+    eye = line[2]
+    assert eye in ['LEFT', 'RIGHT']  # MIGHT NOT WORK FOR BINOCULAR?
+    eye = eye[0]
+    # always recorded
+    sfreq = None
+    track = None
+    filt = None
+    fields = list()
+    for fi, f in enumerate(line[3:]):
+        if f == 'RATE':
+            sfreq = float(line[fi + 4])
+        elif f == 'TRACKING':
+            track = line[fi + 4]
+        elif f == 'FILTER':
+            filt = line[fi + 4]
+        elif f == 'VEL':
+            fields.extend(['xv', 'yv'])
+        elif f == 'RES':
+            fields.extend(['xres', 'yres'])
+        elif f == 'INPUT':
+            fields.append('input')
+
+    if any([x is None for x in [sfreq, track, filt]]):
+        raise RuntimeError('bad line definition: "%s"' % line)
+    return fields, eye, sfreq, track, filt
 
 
 class Raw(object):
@@ -29,82 +74,153 @@ class Raw(object):
         The name of the ASCII converted EDF file.
     """
     def __init__(self, fname):
-        self.info = {'fname': fname, 'fields': EDF.SAMPLE.split()}
+        self.info = {'fname': fname}
 
-        samples, saccades, fixations, blinks, validation = \
-            [[] for _ in '.....']
-
-        preamble = []
+        samples, esacc, efix, eblink, header, preamble, messages = \
+            [list() for _ in range(7)]
+        started = False
         with open(fname, 'r') as fid:
             for line in fid:
-                if not samples:
-                    preamble += [line]
-                if line[0].isdigit():
-                    samples += [line]
-                elif EDF.CODE_SAC in line:
-                    saccades += [line]
-                elif EDF.CODE_FIX in line:
-                    fixations += [line]
-                elif EDF.CODE_BLINK in line:
-                    blinks += [line]
+                if line[0] not in ['#/;']:  # comment line, ignore it
+                    if not started:
+                        if line[:2] == '**':
+                            preamble.append(line)
+                        elif line[0].isdigit():
+                            started = True
+                        else:
+                            header.append(line)
+                    if started:
+                        if line[0].isdigit():
+                            samples.append(line)
+                        elif EDF.CODE_ESAC == line[:len(EDF.CODE_ESAC)]:
+                            esacc.append(line)
+                        elif EDF.CODE_EFIX == line[:len(EDF.CODE_EFIX)]:
+                            efix.append(line)
+                        elif EDF.CODE_EBLINK in line[:len(EDF.CODE_EBLINK)]:
+                            eblink.append(line)
+                        elif 'MSG' == line[:3]:
+                            messages.append(line)
+                        elif EDF.CODE_SSAC == line[:len(EDF.CODE_SSAC)]:
+                            pass
+                        elif EDF.CODE_SFIX == line[:len(EDF.CODE_SFIX)]:
+                            pass
+                        elif EDF.CODE_SBLINK == line[:len(EDF.CODE_SBLINK)]:
+                            pass
+                        elif 'END' == line[:3]:
+                            pass
+                        elif 'INPUT' == line[:5]:
+                            pass
+                        else:
+                            # let's play it safe here
+                            raise RuntimeError('data not understood: "%s"'
+                                               % line)
 
-            for line in preamble:
-                if '!MODE'in line:
-                    line = line.split()
-                    self.info['eye'] = line[-1]
-                    self.info['sfreq'] = float(line[-4])
-                elif 'VALIDATE' in line:
-                    line = line.split()
-                    xy = line[-6].split(',')
-                    xy_diff = line[-2].split(',')
-                    validation.append({'point-x': xy[0],
-                                       'point-y': xy[1],
-                                       'offset': line[-4],
-                                       'diff-x': xy_diff[0],
-                                       'diff-y': xy_diff[1]})
-                elif 'DATE:' in line:
-                    line = _extract_sys_info(line)
-                    fmt = '%a %b  %d %H:%M:%S %Y'
-                    self.info['meas_date'] = datetime.strptime(line, fmt)
-                elif 'VERSION:' in line:
-                    self.info['version'] = _extract_sys_info(line)
-                elif 'CAMERA:' in line:
-                    self.info['camera'] = _extract_sys_info(line)
-                elif 'SERIAL NUMBER:' in line:
-                    self.info['serial'] = _extract_sys_info(line)
-                elif 'CAMERA_CONFIG:' in line:
-                    self.info['camera_config'] = _extract_sys_info(line)
-                elif 'DISPLAY_COORDS' in line:
-                    self.info['screen_coords'] = np.array(line.split()[-2:],
-                                                          dtype='i8')
-
-        self.info['validation'] = pd.DataFrame(validation, dtype=np.float64)
-        self.samples = _assemble_data(samples, columns=EDF.SAMPLE.split())
-        [self.samples.pop(k) for k in ['N1', 'N2']]
-
-        del samples
-        self.info['event_types'] = []
+        # parse the header
+        self._parse_header(header)
+        samples = _assemble_data(samples, columns=self.info['sample_fields'])
+        self.samples = samples
         d = self.discrete = {}
-        for kind in ['saccades', 'fixations', 'blinks']:
-            data = eval(kind)
-            columns = {'saccades': EDF.SAC, 'fixations': EDF.FIX,
-                       'blinks': EDF.BLINK}[kind]
-            if data:
-                d[kind] = _assemble_data(data, columns=columns.split())
-                del data
+        kind_str = ['saccades', 'fixations', 'blinks']
+        kind_list = [esacc, efix, eblink]
+        column_list = [self.info['saccade_fields'],
+                       self.info['fixation_fields'],
+                       EDF.BLINK_FIELDS]
+        for s, kind, cols in zip(kind_str, kind_list, column_list):
+            d[s] = _assemble_data(kind, columns=cols)
+        d['messages'] = _assemble_messages(messages)
 
         # set t0 to 0 and scale to seconds
         self._t_zero = self.samples['time'][0]
         self.samples['time'] -= self._t_zero
         self.samples['time'] /= 1e3
-        key = ['stime', 'etime']
+        self.discrete['messages']['time'] -= self._t_zero
+        self.discrete['messages']['time'] /= 1e3
+        key = ['stime', 'etime', 'dur']
+        self.info['event_types'] = []
         for kind in ['samples', 'saccades', 'fixations', 'blinks']:
             df = d.get(kind, None)
             if df is not None:
-                df[key] -= self._t_zero
-                df[key] /= 1e3
-                df['dur'] /= 1e3
+                if key[0] in df:  # samples do not have these keys
+                    df[key[:2]] -= self._t_zero
+                    df[key] /= 1e3
                 self.info['event_types'].append(kind)
+
+    def _parse_header(self, header):
+        """Parse EL header information"""
+        validation = list()
+        def_lines = list()
+        for line in header:
+            if line[:7] == 'SAMPLES' or line[:6] == 'EVENTS':
+                def_lines.append(line)
+            elif '!MODE'in line:
+                line = line.split()
+                self.info['eye'] = line[-1]
+                self.info['sfreq'] = float(line[-4])
+            elif 'VALIDATE' in line:
+                line = line.split()
+                xy = line[-6].split(',')
+                xy_diff = line[-2].split(',')
+                validation.append({'point-x': xy[0],
+                                   'point-y': xy[1],
+                                   'offset': line[-4],
+                                   'diff-x': xy_diff[0],
+                                   'diff-y': xy_diff[1]})
+            elif 'DATE:' in line:
+                line = _extract_sys_info(line).strip()
+                fmt = '%a %b  %d %H:%M:%S %Y'
+                self.info['meas_date'] = datetime.strptime(line, fmt)
+            elif 'VERSION:' in line:
+                self.info['version'] = _extract_sys_info(line)
+            elif 'CAMERA:' in line:
+                self.info['camera'] = _extract_sys_info(line)
+            elif 'SERIAL NUMBER:' in line:
+                self.info['serial'] = _extract_sys_info(line)
+            elif 'CAMERA_CONFIG:' in line:
+                self.info['camera_config'] = _extract_sys_info(line)
+            elif 'DISPLAY_COORDS' in line:
+                self.info['screen_coords'] = np.array(line.split()[-2:],
+                                                      dtype='i8')
+            elif EDF.CODE_PUPIL in line:
+                if EDF.CODE_PUPIL_AREA in line:
+                    self.info['ps_units'] = 'area'
+                elif EDF.CODE_PUPIL_DIAMETER in line:
+                    self.info['ps_units'] = 'diameter'
+
+        self._parse_event_format(def_lines)  # populates self.info
+        if not all([x in self.info
+                    for x in ['sample_fields', 'event_fields']]):
+            raise RuntimeError('could not parse header')
+        self.info['validation'] = pd.DataFrame(validation, dtype=np.float64)
+
+    def _parse_event_format(self, def_lines):
+        """Figure out what all our fields are from SAMPLES & EVENTS lines"""
+        assert len(def_lines) == 2
+        saccade_fields = ['eye', 'stime', 'etime', 'dur', 'sxp', 'syp',
+                          'exp', 'eyp', 'ampl', 'pv']
+        fixation_fields = ['eye', 'stime', 'etime', 'dur', 'axp', 'ayp', 'aps']
+
+        for line in def_lines:
+            extra, eye, sfreq, track, filt = _get_fields(line)
+            if line[:7] == 'SAMPLES':
+                fields = ['time', 'xpos', 'ypos', 'ps']
+                key = 'sample_fields'
+            else:
+                fields = ['eye', 'stime', 'etime', 'dur', 'xpos', 'ypos', 'ps']
+                key = 'event_fields'
+                saccade_fields.extend(extra)
+                fixation_fields.extend(extra)
+
+            fields.extend(extra)
+            fields.append('status')
+            for k, v in zip(['sfreq', 'track', 'filt', 'eye'],
+                            [sfreq, track, filt, eye]):
+                if k in self.info:
+                    assert self.info[k] == v
+                else:
+                    self.info[k] = v
+            self.info[key] = fields
+        self.info['saccade_fields'] = saccade_fields
+        self.info['fixation_fields'] = fixation_fields
 
     def __repr__(self):
         return '<Raw | {0} samples>'.format(len(self.samples))
