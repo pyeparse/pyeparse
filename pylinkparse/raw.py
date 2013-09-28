@@ -83,40 +83,41 @@ class Raw(object):
         started = False
         with open(fname, 'r') as fid:
             for line in fid:
-                if line[0] not in ['#/;']:  # comment line, ignore it
-                    if not started:
-                        if line[:2] == '**':
-                            preamble.append(line)
-                        elif line[0].isdigit():
-                            started = True
-                        else:
-                            header.append(line)
-                    if started:
-                        if line[0].isdigit():
-                            samples.append(line)
-                        elif EDF.CODE_ESAC == line[:len(EDF.CODE_ESAC)]:
-                            # deal with old pandas version, add an index.
-                            esacc.append(line)
-                        elif EDF.CODE_EFIX == line[:len(EDF.CODE_EFIX)]:
-                            efix.append(line)
-                        elif EDF.CODE_EBLINK in line[:len(EDF.CODE_EBLINK)]:
-                            eblink.append(line)
-                        elif 'MSG' == line[:3]:
-                            messages.append(line)
-                        elif EDF.CODE_SSAC == line[:len(EDF.CODE_SSAC)]:
-                            pass
-                        elif EDF.CODE_SFIX == line[:len(EDF.CODE_SFIX)]:
-                            pass
-                        elif EDF.CODE_SBLINK == line[:len(EDF.CODE_SBLINK)]:
-                            pass
-                        elif 'END' == line[:3]:
-                            pass
-                        elif 'INPUT' == line[:5]:
-                            pass
-                        else:
-                            # let's play it safe here
-                            raise RuntimeError('data not understood: "%s"'
-                                               % line)
+                if line[0] in ['#/;']:  # comment line, ignore it
+                    continue
+                if not started:
+                    if line[:2] == '**':
+                        preamble.append(line)
+                    elif line[0].isdigit():
+                        started = True
+                    else:
+                        header.append(line)
+                if started:
+                    if line[0].isdigit():
+                        samples.append(line)
+                    elif EDF.CODE_ESAC == line[:len(EDF.CODE_ESAC)]:
+                        # deal with old pandas version, add an index.
+                        esacc.append(line)
+                    elif EDF.CODE_EFIX == line[:len(EDF.CODE_EFIX)]:
+                        efix.append(line)
+                    elif EDF.CODE_EBLINK in line[:len(EDF.CODE_EBLINK)]:
+                        eblink.append(line)
+                    elif 'MSG' == line[:3]:
+                        messages.append(line)
+                    elif EDF.CODE_SSAC == line[:len(EDF.CODE_SSAC)]:
+                        pass
+                    elif EDF.CODE_SFIX == line[:len(EDF.CODE_SFIX)]:
+                        pass
+                    elif EDF.CODE_SBLINK == line[:len(EDF.CODE_SBLINK)]:
+                        pass
+                    elif 'END' == line[:3]:
+                        pass
+                    elif 'INPUT' == line[:5]:
+                        pass
+                    else:
+                        # let's play it safe here
+                        raise RuntimeError('data not understood: "%s"'
+                                           % line)
 
         # parse the header
         self._parse_header(header)
