@@ -3,6 +3,7 @@
 # License: BSD (3-clause)
 
 import numpy as np
+from .utils import safe_bool
 
 
 class Discrete(list):
@@ -14,7 +15,7 @@ class Discrete(list):
 
     def __repr__(self):
         s = '<Discrete | {0} epochs; {1} events>'
-        return s.format(len(self), sum(len(d) for d in self if d))
+        return s.format(len(self), sum(len(d) for d in self if safe_bool(d)))
 
 
 def find_custom_events(raw, pattern, event_id, prefix=True, sep=' '):
