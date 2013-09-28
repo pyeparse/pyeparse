@@ -43,8 +43,8 @@ class Epochs(object):
         elif np.isscalar(event_id):
             my_event_id = [event_id]
 
-        discrete_inds = [{kk: [] for kk in my_event_id} for _ in '....']
-        sample_inds = discrete_inds.pop(0)
+        discrete_inds = [[] for _ in range(3)]
+        sample_inds = {k: [] for k in my_event_id}
         saccade_inds, fixation_inds, blink_inds = discrete_inds
         keep_idx = []
         ii = 0
@@ -66,7 +66,7 @@ class Epochs(object):
                 assert_array_less(df['stime'], df['etime'])
                 event_in_window = np.where((df['stime'] >= this_tmin) &
                                            (df['etime'] <= this_tmax))
-                parsed[this_id].append([event_in_window[0], ii])
+                parsed.append([event_in_window[0], ii, this_id])
             keep_idx.append(ii)
             ii += 1
 
@@ -77,20 +77,19 @@ class Epochs(object):
                                 discrete_inds):
             this_in = raw.discrete.get(kind, None)
             if this_in is not None:
-                for this_id, values in parsed.iteritems():
+                this_discrete = Discrete()
+                for inds, epochs_idx, this_id in parsed:
                     this_id = (this_id if event_keys is None else
                                event_keys[this_id])
-                    this_discrete = Discrete()
-                    for ind in zip(*values)[0]:
-                        if ind.any().any():
-                            df = this_in.ix[ind]
-                            df['event_id'] = this_id
-                            this_discrete.append(df)
-                        else:
-                            this_discrete.append([])
-                    this_name = kind + '_'
-                    setattr(self, this_name, this_discrete)
-                    self.info['discretes'] += [this_name]
+                    if inds.any().any():
+                        df = this_in.ix[inds]
+                        df['event_id'] = this_id
+                        this_discrete.append(df)
+                    else:
+                        this_discrete.append([])
+                this_name = kind + '_'
+                setattr(self, this_name, this_discrete)
+                self.info['discretes'] += [this_name]
 
         _samples = []
         c = np.concatenate
