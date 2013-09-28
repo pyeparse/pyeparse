@@ -39,4 +39,4 @@ pl.title('Post baseline saccade (X, pos)')
 pl.show()
 
 
-plp.viz.plot_epochs(epochs, [0, 1, 2])
+plp.viz.plot_epochs(epochs, picks=[0, 1, 2])

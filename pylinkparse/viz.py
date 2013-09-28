@@ -179,7 +179,6 @@ def _draw_epochs_axes(epoch_idx, data, times, axes,
     """Aux functioin"""
     this = axes_handler[0]
     data = np.ma.masked_invalid(data)
-    print data.min(), data.max()
     for ii, data_, ax in zip(epoch_idx, data, axes):
         [l.set_data(times, d) for l, d in zip(ax.lines, data_)]
         if title_str is not None:
@@ -200,7 +199,6 @@ def _draw_epochs_axes(epoch_idx, data, times, axes,
                 if vars(ax).get(k, {}).get('reject', None) is True:
                     [l.set_color('k') for l in ax.lines]
                     ax.get_figure().canvas.draw()
-                    print 'finally!!!\n' * 100
                     break
 
 
@@ -320,13 +318,12 @@ def plot_epochs(epochs, epoch_idx=None, picks=None, scalings=None,
     this_idx = idx_handler[0]
     fig, axes = _prepare_trellis(len(this_idx), max_col=5)
     axes_handler = deque(range(len(idx_handler)))
-    df = epochs[this_idx].data_frame.ix[:, picks]
-    for ii, ax in zip(idx_handler[0], axes):
-        go = df.ix[ii]
-        go.plot(ax=ax, legend=False)
+    data = np.ma.masked_invalid(epochs.data[this_idx][:, picks])
+    for ii, ax, data_ in zip(idx_handler[0], axes, data):
+        ax.plot(times, data_.T)
         if title_str is not None:
             ax.set_title(title_str % ii, fontsize=12)
-        ax.set_ylim(df.min().min(), df.max().max())
+        ax.set_ylim(data.min(), data.max())
         ax.set_yticks([])
         ax.set_xticks([])
         vars(ax)[axes_handler[0]] = {'idx': ii, 'reject': False}
