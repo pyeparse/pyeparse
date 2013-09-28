@@ -178,6 +178,7 @@ def _draw_epochs_axes(epoch_idx, data, times, axes,
                       title_str, axes_handler):
     """Aux functioin"""
     this = axes_handler[0]
+
     for ii, data_, ax in zip(epoch_idx, data, axes):
         [l.set_data(times, d) for l, d in zip(ax.lines, data_)]
         if title_str is not None:
@@ -219,7 +220,7 @@ def _epochs_navigation_onclick(event, params):
         p['idx_handler'].rotate(here)
         p['axes_handler'].rotate(here)
         this_idx = p['idx_handler'][0]
-        data = p['epochs'].data[this_idx][p['picks']]
+        data = p['epochs'].data[this_idx][:, p['picks']]
         _draw_epochs_axes(this_idx, data, p['times'], p['axes'],
                           p['title_str'],
                           p['axes_handler'])
@@ -237,17 +238,16 @@ def _epochs_axes_onclick(event, params):
         idx = here['idx']
         if idx not in p['reject_idx']:
             p['reject_idx'].append(idx)
-            [l.set_color(reject_color) for l in ax.lines]
+            for line in ax.lines:
+                vars(line)['def-col'] = line.get_color()
+                line.set_color(reject_color)
             here['reject'] = True
     elif here.get('reject', None) is True:
         idx = here['idx']
         if idx in p['reject_idx']:
             p['reject_idx'].pop(p['reject_idx'].index(idx))
-            good_lines = [ax.lines[k] for k in p['good_ch_idx']]
-            [l.set_color('k') for l in good_lines]
-            if p['bad_ch_idx'] is not None:
-                bad_lines = ax.lines[-len(p['bad_ch_idx']):]
-                [l.set_color('r') for l in bad_lines]
+            for line in ax.lines:
+                line.set_color(vars(line)['def-col'])
             here['reject'] = False
     ax.get_figure().canvas.draw()
 
@@ -314,17 +314,16 @@ def plot_epochs(epochs, epoch_idx=None, picks=None, scalings=None,
     epoch_idx = epoch_idx[:n_events]
     idx_handler = deque(create_chunks(epoch_idx, 20))
     # handle bads
-
-    fig, axes = _prepare_trellis(epochs._n_epochs, max_col=5)
+    this_idx = idx_handler[0]
+    fig, axes = _prepare_trellis(len(this_idx), max_col=5)
     axes_handler = deque(range(len(idx_handler)))
-    df = epochs[idx_handler[0]].data_frame
-    import pdb;pdb.set_trace()
+    df = epochs[this_idx].data_frame.ix[:, picks]
     for ii, ax in zip(idx_handler[0], axes):
-        go = df.ix[ii, picks]
-        go.plot(color='k', ax=ax, legend=False)
+        go = df.ix[ii]
+        go.plot(ax=ax, legend=False)
         if title_str is not None:
             ax.set_title(title_str % ii, fontsize=12)
-        ax.set_ylim(go.min(), go.max())
+        ax.set_ylim(df.min().min(), df.max().max())
         ax.set_yticks([])
         ax.set_xticks([])
         vars(ax)[axes_handler[0]] = {'idx': ii, 'reject': False}
@@ -334,7 +333,7 @@ def plot_epochs(epochs, epoch_idx=None, picks=None, scalings=None,
         for ii, ax in zip(this_inds, axes):
             vars(ax)[this_view] = {'idx': ii, 'reject': False}
 
-    pl.tight_layout()
+    # pl.tight_layout()
     navigation = figure_nobar(figsize=(3, 1.5))
     from matplotlib import gridspec
     gs = gridspec.GridSpec(2, 2)

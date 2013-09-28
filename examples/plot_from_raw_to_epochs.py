@@ -24,7 +24,7 @@ epochs = plp.Epochs(raw, events=events, event_id=event_id, tmin=tmin,
 # access pandas data frame and plot single epoch
 import pylab as pl
 pl.figure()
-epochs.data_frame.ix[0, ['xpos', 'ypos']].plot()
+epochs.data_frame.ix[3, ['xpos', 'ypos']].plot()
 
 # iterate over and access numpy arrays.
 # find epochs withouth loss of tracking / blinks
@@ -37,3 +37,6 @@ pl.figure()
 pl.plot(times[time_mask], epochs.data[0, 0, time_mask])
 pl.title('Post baseline saccade (X, pos)')
 pl.show()
+
+
+plp.viz.plot_epochs(epochs, [0, 1, 2])
