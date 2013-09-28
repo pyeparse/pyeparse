@@ -4,12 +4,12 @@
 
 import numpy as np
 import pandas as pd
-import itertools
 from datetime import datetime
 from cStringIO import StringIO
 
 from .constants import EDF
 from .event import find_events
+from .utils import check_line_index
 from .viz import plot_calibration, plot_heatmap_raw
 
 
@@ -81,7 +81,6 @@ class Raw(object):
         samples, esacc, efix, eblink, header, preamble, messages = \
             [list() for _ in range(7)]
         started = False
-        scount, fcount, bcount = [itertools.count() for _ in range(3)]
         with open(fname, 'r') as fid:
             for line in fid:
                 if line[0] not in ['#/;']:  # comment line, ignore it
@@ -97,11 +96,11 @@ class Raw(object):
                             samples.append(line)
                         elif EDF.CODE_ESAC == line[:len(EDF.CODE_ESAC)]:
                             # deal with old pandas version, add an index.
-                            esacc.append(('%i' % scount.next()) + line)
+                            esacc.append(line)
                         elif EDF.CODE_EFIX == line[:len(EDF.CODE_EFIX)]:
-                            efix.append(('%i' % fcount.next()) + line)
+                            efix.append(line)
                         elif EDF.CODE_EBLINK in line[:len(EDF.CODE_EBLINK)]:
-                            eblink.append(('%i' % bcount.next()) + line)
+                            eblink.append(line)
                         elif 'MSG' == line[:3]:
                             messages.append(line)
                         elif EDF.CODE_SSAC == line[:len(EDF.CODE_SSAC)]:
@@ -130,7 +129,7 @@ class Raw(object):
                        self.info['fixation_fields'],
                        EDF.BLINK_FIELDS]
         for s, kind, cols in zip(kind_str, kind_list, column_list):
-            d[s] = _assemble_data(kind, columns=cols)
+            d[s] = _assemble_data(check_line_index(kind), columns=cols)
         d['messages'] = _assemble_messages(messages)
 
         # set t0 to 0 and scale to seconds
