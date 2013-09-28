@@ -88,8 +88,9 @@ class Epochs(object):
                             this_discrete.append(df)
                         else:
                             this_discrete.append([])
-
-                    setattr(self, kind + '_', this_discrete)
+                    this_name = kind + '_'
+                    setattr(self, this_name, this_discrete)
+                    self.info['discretes'] += [this_name]
 
         _samples = []
         c = np.concatenate
@@ -156,3 +157,28 @@ class Epochs(object):
     @property
     def data_frame(self):
         return self._data
+
+    def __getitem__(self, idx):
+        out = self.copy()
+        if isinstance(idx, basestring):
+            if idx not in self.event_id:
+                raise ValueError('ID not found')
+            idx = self.event_id[idx]
+            idx = np.where(self.events[:, -1] == idx)[0]
+        elif np.isscalar(idx):
+            idx = [idx]
+        elif isinstance(idx, slice):
+            idx = np.arange(*idx.indices(idx.stop))
+
+        out._data = out._data.ix[idx]
+        out.events = out.events[idx]
+        for discrete in self.info['discretes']:
+            disc = vars(self)[discrete]
+            disc = Discrete(disc[k] for k in idx)
+
+        return out
+
+    def copy(self):
+        """Return a copy of Epochs.
+        """
+        return copy.deepcopy(self)

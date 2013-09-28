@@ -21,3 +21,8 @@ def test_epochs_io():
     assert_equal(len(epochs.events), 3)
     assert_equal(epochs.data_frame.shape[0] / epochs._n_times,
                  len(epochs.events))
+
+    epochs[0]
+    epochs[[0, 1]]
+    epochs['a']
+    epochs[slice(2)]

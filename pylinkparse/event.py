@@ -9,8 +9,8 @@ class Discrete(list):
     """ Simple Container for discrete data based on Python list
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, *args):
+        list.__init__(self, *args)
 
     def __repr__(self):
         s = '<Discrete | {0} epochs; {1} events>'

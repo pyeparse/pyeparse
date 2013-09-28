@@ -224,6 +224,7 @@ class Raw(object):
             self.info[key] = fields
         self.info['saccade_fields'] = saccade_fields
         self.info['fixation_fields'] = fixation_fields
+        self.info['discretes'] = []
 
     def __repr__(self):
         return '<Raw | {0} samples>'.format(len(self.samples))
