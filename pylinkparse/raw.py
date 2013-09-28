@@ -4,6 +4,7 @@
 
 import numpy as np
 import pandas as pd
+import itertools
 from datetime import datetime
 from cStringIO import StringIO
 
@@ -80,6 +81,7 @@ class Raw(object):
         samples, esacc, efix, eblink, header, preamble, messages = \
             [list() for _ in range(7)]
         started = False
+        scount, fcount, bcount = [itertools.count() for _ in range(3)]
         with open(fname, 'r') as fid:
             for line in fid:
                 if line[0] not in ['#/;']:  # comment line, ignore it
@@ -94,11 +96,12 @@ class Raw(object):
                         if line[0].isdigit():
                             samples.append(line)
                         elif EDF.CODE_ESAC == line[:len(EDF.CODE_ESAC)]:
-                            esacc.append(line)
+                            # deal with old pandas version, add an index.
+                            esacc.append(('%i' % scount.next()) + line)
                         elif EDF.CODE_EFIX == line[:len(EDF.CODE_EFIX)]:
-                            efix.append(line)
+                            efix.append(('%i' % fcount.next()) + line)
                         elif EDF.CODE_EBLINK in line[:len(EDF.CODE_EBLINK)]:
-                            eblink.append(line)
+                            eblink.append(('%i' % bcount.next()) + line)
                         elif 'MSG' == line[:3]:
                             messages.append(line)
                         elif EDF.CODE_SSAC == line[:len(EDF.CODE_SSAC)]:

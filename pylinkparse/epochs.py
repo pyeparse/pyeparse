@@ -109,7 +109,7 @@ class Epochs(object):
         sort_k = ['epoch_idx', 'time']  # important for multiple conditions
         # ignore index to allow for sorting + keep unique values
         self._data = pd.concat(_samples, ignore_index=True)
-        self._data.sort(sort_k, inplace=True)
+        self._data = self._data.sort(sort_k)
         assert set(track_inds) == set([min_samples])
         n_samples = min_samples
         n_epochs = len(track_inds)

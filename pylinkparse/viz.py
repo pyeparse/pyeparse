@@ -253,7 +253,8 @@ def _epochs_axes_onclick(event, params):
     ax.get_figure().canvas.draw()
 
 
-def plot_epochs(epochs, epoch_idx=None, picks=None, scalings=None,
+def plot_epochs(epochs, epoch_idx=None, picks=None, n_chunks=20,
+                scalings=None,
                 title_str='#%003i', show=True, block=False):
     """ Visualize single trials using Trellis plot.
 
@@ -265,6 +266,8 @@ def plot_epochs(epochs, epoch_idx=None, picks=None, scalings=None,
     epoch_idx : array-like | int | None
         The epochs to visualize. If None, the first 20 epochs are shown.
         Defaults to None.
+    n_chunks : int
+        The number of chunks to use for display.
     picks : array-like | None
         Channels to be included. If None only good data channels are used.
         Defaults to None
@@ -298,8 +301,6 @@ def plot_epochs(epochs, epoch_idx=None, picks=None, scalings=None,
         epoch_idx = range(n_events)
     else:
         n_events = len(epoch_idx)
-    epoch_idx = epoch_idx[:n_events]
-    idx_handler = deque(create_chunks(epoch_idx, 20))
 
     if picks is None:
         picks = np.arange(len(epochs.info['data_cols']))
@@ -313,7 +314,8 @@ def plot_epochs(epochs, epoch_idx=None, picks=None, scalings=None,
     # preallocation needed for min / max scaling
     n_events = len(epochs.events)
     epoch_idx = epoch_idx[:n_events]
-    idx_handler = deque(create_chunks(epoch_idx, 20))
+    idx_handler = deque(create_chunks(epoch_idx, n_chunks))
+
     # handle bads
     this_idx = idx_handler[0]
     fig, axes = _prepare_trellis(len(this_idx), max_col=5)
