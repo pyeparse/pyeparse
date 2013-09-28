@@ -107,18 +107,18 @@ class Epochs(object):
 
         sort_k = ['epoch_idx', 'time']  # important for multiple conditions
         # ignore index to allow for sorting + keep unique values
-        self.data = pd.concat(_samples, ignore_index=True)
-        self.data.sort(sort_k, inplace=True)
+        self._data = pd.concat(_samples, ignore_index=True)
+        self._data.sort(sort_k, inplace=True)
         assert set(track_inds) == set([min_samples])
         n_samples = min_samples
         n_epochs = len(track_inds)
         self.times = np.linspace(tmin, tmax, n_samples)
-        self.data['times'] = np.tile(self.times, n_epochs)
+        self._data['times'] = np.tile(self.times, n_epochs)
         self._n_times = min_samples
         self._n_epochs = n_epochs
 
-        self.data.set_index(['epoch_idx', 'times'], drop=True,
-                            inplace=True, verify_integrity=True)
+        self._data.set_index(['epoch_idx', 'times'], drop=True,
+                             inplace=True, verify_integrity=True)
         self._current = 0
 
     def __repr__(self):
@@ -137,7 +137,7 @@ class Epochs(object):
 
         if self._current >= self._n_epochs:
             raise StopIteration
-        epoch = self.data.ix[self._current]
+        epoch = self.data_frame.ix[self._current]
         epoch = epoch[self.info['data_cols']].values
         self._current += 1
         if not return_event_id:
@@ -145,9 +145,14 @@ class Epochs(object):
         else:
             return epoch, self.events[self._current - 1][-1]
 
-    def __getitem__(self, idx):
-        out = self.data[self.info['data_cols']].values
+    @property
+    def data(self):
+        out = self._data[self.info['data_cols']].values
         out = out.reshape(self._n_epochs,
                           self._n_times,
                           len(self.info['data_cols']))
-        return np.transpose(out, [0, 2, 1])[idx]
+        return np.transpose(out, [0, 2, 1])
+
+    @property
+    def data_frame(self):
+        return self._data
