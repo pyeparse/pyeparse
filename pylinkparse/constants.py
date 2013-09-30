@@ -30,3 +30,7 @@ EDF.CODE_EBLINK = 'EBLINK'
 EDF.BLINK_FIELDS = ['eye', 'stime', 'etime', 'dur']  # this one is fixed
 EDF.MESSAGE_FIELDS = ['time', 'msg']  # this one is fixed
 EDF.START_FIELDS = ['event', 'eye', 'stime']
+EDF.MLINES = ['eye check box', 'href cal range', 'Cal coeff', 'Prenormalize',
+              'Quadrant center', 'Corner correction']
+EDF.DEF_LINES = ['PUPIL', 'SAMPLES', 'EVENTS', 'PRESCALER', 'VPRESCALER',
+                 'START']

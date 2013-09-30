@@ -78,20 +78,20 @@ class Raw(object):
     def __init__(self, fname):
         self.info = {'fname': fname}
 
-        samples, esacc, efix, eblink, header, preamble, messages = \
-            [list() for _ in range(7)]
+        def_lines, samples, esacc, efix, eblink, calibs, preamble, \
+            messages = [list() for _ in range(8)]
         started = False
         with open(fname, 'r') as fid:
             for line in fid:
                 if line[0] in ['#/;']:  # comment line, ignore it
                     continue
                 if not started:
-                    if line[:2] == '**':
+                    if line.startswith('**'):
                         preamble.append(line)
-                    elif line[0].isdigit():
-                        started = True
                     else:
-                        header.append(line)
+                        started = True
+                        continue  # don't parse empty  line
+
                 if started:
                     if line[0].isdigit():
                         samples.append(line)
@@ -104,6 +104,19 @@ class Raw(object):
                         eblink.append(line)
                     elif 'MSG' == line[:3]:
                         messages.append(line)
+                    elif 'CALIBRATION' in line and line.startswith('>'):
+                        # Add another calibration section
+                        calib_lines = []
+                        while True:
+                            subline = fid.next()
+                            if subline.startswith('START'):
+                                break
+                            calib_lines.append(subline)
+                        calibs.append(calib_lines)
+                        # let's play it safe here
+                    elif any([line.startswith(k) for k in
+                             EDF.DEF_LINES]):
+                        def_lines.append(line)
                     elif EDF.CODE_SSAC == line[:len(EDF.CODE_SSAC)]:
                         pass
                     elif EDF.CODE_SFIX == line[:len(EDF.CODE_SFIX)]:
@@ -115,12 +128,22 @@ class Raw(object):
                     elif 'INPUT' == line[:5]:
                         pass
                     else:
-                        # let's play it safe here
                         raise RuntimeError('data not understood: "%s"'
                                            % line)
-
         # parse the header
-        self._parse_header(header)
+        self._parse_pramble(preamble)
+        self._parse_def_lines(def_lines)
+
+        if not all([x in self.info
+                    for x in ['sample_fields', 'event_fields']]):
+            raise RuntimeError('could not parse header')
+        self.info['calibration'] = []
+        if calibs:
+            for calib_lines in calibs:
+                validation = self._parse_calibration(calib_lines)
+                self.info['calibration'].append(validation)
+                if 'sample_fields' not in self.info:
+                    self._parse_put_event_format(def_lines)
         samples = _assemble_data(samples, columns=self.info['sample_fields'])
         self.samples = samples
         d = self.discrete = {}
@@ -152,26 +175,12 @@ class Raw(object):
         self.info['data_cols'] = [kk for kk, dt in zip(df.columns, df.dtypes)
                                   if dt != 'O' and kk != 'time']
 
-    def _parse_header(self, header):
-        """Parse EL header information"""
-        validation = list()
-        def_lines = list()
-        for line in header:
-            if line[:7] == 'SAMPLES' or line[:6] == 'EVENTS':
-                def_lines.append(line)
-            elif '!MODE'in line:
+    def _parse_pramble(self, preamble_lines):
+        for line in preamble_lines:
+            if '!MODE'in line:
                 line = line.split()
                 self.info['eye'] = line[-1]
                 self.info['sfreq'] = float(line[-4])
-            elif 'VALIDATE' in line:
-                line = line.split()
-                xy = line[-6].split(',')
-                xy_diff = line[-2].split(',')
-                validation.append({'point-x': xy[0],
-                                   'point-y': xy[1],
-                                   'offset': line[-4],
-                                   'diff-x': xy_diff[0],
-                                   'diff-y': xy_diff[1]})
             elif 'DATE:' in line:
                 line = _extract_sys_info(line).strip()
                 fmt = '%a %b  %d %H:%M:%S %Y'
@@ -187,19 +196,56 @@ class Raw(object):
             elif 'DISPLAY_COORDS' in line:
                 self.info['screen_coords'] = np.array(line.split()[-2:],
                                                       dtype='i8')
+
+    def _parse_def_lines(self, def_lines):
+        format_lines = list()
+        for line in def_lines:
+            if line[:7] == 'SAMPLES' or line[:6] == 'EVENTS':
+                format_lines.append(line)
             elif EDF.CODE_PUPIL in line:
                 if EDF.CODE_PUPIL_AREA in line:
                     self.info['ps_units'] = 'area'
                 elif EDF.CODE_PUPIL_DIAMETER in line:
                     self.info['ps_units'] = 'diameter'
+            elif 'PRESCALER' in line:
+                k, v = line.split()
+                self.info[k] = int(v)
+        self._parse_put_event_format(format_lines)
 
-        self._parse_event_format(def_lines)  # populates self.info
-        if not all([x in self.info
-                    for x in ['sample_fields', 'event_fields']]):
-            raise RuntimeError('could not parse header')
-        self.info['validation'] = pd.DataFrame(validation, dtype=np.float64)
+    def _parse_calibration(self, calib_lines):
+        """Parse EL header information"""
+        validations = list()
+        lines = iter(calib_lines)
+        for line in lines:
+            if '!CAL VALIDATION ' in line:
+                cal_kind = line.split('!CAL VALIDATION ')[1].split()[0]
+                n_points = int([c for c in cal_kind if c.isdigit()][0])
+                this_validation = []
+                while n_points != 0:
+                    n_points -= 1
+                    subline = lines.next().split()
+                    xy = subline[-6].split(',')
+                    xy_diff = subline[-2].split(',')
+                    this_validation.append({'point-x': xy[0],
+                                            'point-y': xy[1],
+                                            'offset': subline[-4],
+                                            'diff-x': xy_diff[0],
+                                            'diff-y': xy_diff[1]})
+                validations.append(this_validation)
+            elif any([k in line for k in EDF.MLINES]):
+                additional_lines = []
+                # additiona lines on our way to the
+                # empty line block tail
+                while True:
+                    this_line = lines.next()
+                    if not this_line.strip('\n'):
+                        break
+                    additional_lines.append(this_line)
+                line += '  '
+                line += '; '.join(additional_lines)
+        return validations[-1]
 
-    def _parse_event_format(self, def_lines):
+    def _parse_put_event_format(self, def_lines):
         """Figure out what all our fields are from SAMPLES & EVENTS lines"""
         assert len(def_lines) == 2
         saccade_fields = ['eye', 'stime', 'etime', 'dur', 'sxp', 'syp',
