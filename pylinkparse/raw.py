@@ -247,7 +247,12 @@ class Raw(object):
 
     def _parse_put_event_format(self, def_lines):
         """Figure out what all our fields are from SAMPLES & EVENTS lines"""
-        assert len(def_lines) == 2
+        if len(def_lines) > 2:
+            def_lines = def_lines[:2]
+
+        for l,  k in zip(sorted(def_lines), ['EVENTS', 'SAMPLES']):
+            l.startswith(k)
+
         saccade_fields = ['eye', 'stime', 'etime', 'dur', 'sxp', 'syp',
                           'exp', 'eyp', 'ampl', 'pv']
         fixation_fields = ['eye', 'stime', 'etime', 'dur', 'axp', 'ayp', 'aps']
