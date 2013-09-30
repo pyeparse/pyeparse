@@ -141,7 +141,8 @@ class Raw(object):
         if calibs:
             for calib_lines in calibs:
                 validation = self._parse_calibration(calib_lines)
-                self.info['calibration'].append(validation)
+                df = pd.DataFrame(validation, dtype=np.float64)
+                self.info['calibration'].append(df)
                 if 'sample_fields' not in self.info:
                     self._parse_put_event_format(def_lines)
         samples = _assemble_data(samples, columns=self.info['sample_fields'])
@@ -193,9 +194,6 @@ class Raw(object):
                 self.info['serial'] = _extract_sys_info(line)
             elif 'CAMERA_CONFIG:' in line:
                 self.info['camera_config'] = _extract_sys_info(line)
-            elif 'DISPLAY_COORDS' in line:
-                self.info['screen_coords'] = np.array(line.split()[-2:],
-                                                      dtype='i8')
 
     def _parse_def_lines(self, def_lines):
         format_lines = list()
@@ -243,6 +241,10 @@ class Raw(object):
                     additional_lines.append(this_line)
                 line += '  '
                 line += '; '.join(additional_lines)
+            elif 'DISPLAY_COORDS' in line:
+                self.info['screen_coords'] = np.array(line.split()[-2:],
+                                                      dtype='i8')
+
         return validations[-1]
 
     def _parse_put_event_format(self, def_lines):

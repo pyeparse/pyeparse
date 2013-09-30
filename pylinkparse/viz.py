@@ -23,22 +23,23 @@ def plot_calibration(raw, title='Calibration', show=True):
 
     Returns
     -------
-    fig : instance of matplotlib.figure.Figure
+    figs : list of of matplotlib.figure.Figure instances
         The resulting figure object
     """
     import pylab as pl
-    cal = raw.info['validation']
+    figs = []
+    for cal in raw.info['calibration']:
+        fig = pl.figure()
+        figs.append(fig)
+        px, py = cal[['point-x', 'point-y']].values.T
+        dx, dy = cal[['diff-x', 'diff-y']].values.T
 
-    px, py = cal[['point-x', 'point-y']].values.T
-    dx, dy = cal[['diff-x', 'diff-y']].values.T
-
-    fig = pl.figure()
-    pl.title(title)
-    pl.scatter(px, py, color='gray')
-    pl.scatter(px - dx, py - dy, color='red')
+        pl.title(title)
+        pl.scatter(px, py, color='gray')
+        pl.scatter(px - dx, py - dy, color='red')
     if show:
         pl.show()
-    return fig
+    return figs
 
 
 def plot_heatmap(xdata, ydata, width, height, cmap=None,
@@ -112,7 +113,7 @@ def plot_heatmap_raw(raw, start=None, stop=None, cmap=None,
     k = 'screen_coords'
     if k not in raw.info:
         raise RuntimeError('Raw object does not include '
-                           'screem coordinates.')
+                           'screemncoordinates.')
     width, height = raw.info[k]
     if isinstance(start, float):
         start = raw.time_as_index([start])
