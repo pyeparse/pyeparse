@@ -29,7 +29,13 @@ def test_epochs_io():
                      len(epochs.events))
 
         for disc in epochs.info['discretes']:
-            assert_equal(len(vars(epochs)[disc]), len(epochs.events))
+            this_disc = vars(epochs)[disc]
+            assert_equal(len(this_disc), len(epochs.events))
+            for field in ['stime', 'etime']:
+                for di in this_disc:
+                    if field in di:
+                        for event in di[field]:
+                            assert_true(epochs.tmin <= event <= epochs.tmax)
 
         epochs2 = epochs.copy()
         assert_true(epochs._data is not epochs2._data)

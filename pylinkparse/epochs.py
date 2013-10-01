@@ -4,7 +4,6 @@
 
 import pandas as pd
 import copy
-from functools import wraps
 import numpy as np
 from numpy.testing import assert_array_less
 from .event import Discrete
@@ -68,7 +67,7 @@ class Epochs(object):
                 assert_array_less(df['stime'], df['etime'])
                 event_in_window = np.where((df['stime'] >= this_tmin) &
                                            (df['etime'] <= this_tmax))
-                parsed.append([event_in_window[0], ii, this_id])
+                parsed.append([event_in_window[0], ii, this_id, this_time])
             keep_idx.append(ii)
             ii += 1
 
@@ -80,12 +79,14 @@ class Epochs(object):
             this_in = raw.discrete.get(kind, None)
             if this_in is not None:
                 this_discrete = Discrete()
-                for inds, epochs_idx, this_id in parsed:
+                for inds, epochs_idx, this_id, this_time in parsed:
                     this_id = (this_id if event_keys is None else
                                event_keys[this_id])
                     if inds.any().any():
                         df = this_in.ix[inds]
                         df['event_id'] = this_id
+                        df['stime'] -= this_time
+                        df['etime'] -= this_time
                         this_discrete.append(df)
                     else:
                         this_discrete.append([])

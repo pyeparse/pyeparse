@@ -329,6 +329,7 @@ def plot_epochs(epochs, epoch_idx=None, picks=None, n_chunks=20,
     data = np.ma.masked_invalid(epochs.data[this_idx][:, picks])
     for ii, ax, data_ in zip(idx_handler[0], axes, data):
         ax.plot(times, data_.T)
+        ax.axvline(0.0, color='orange', linestyle='--')
         if title_str is not None:
             ax.set_title(title_str % ii, fontsize=12)
         ax.set_ylim(data.min(), data.max())
