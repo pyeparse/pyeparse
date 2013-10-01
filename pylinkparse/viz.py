@@ -6,7 +6,8 @@ import numpy as np
 import math
 from collections import deque
 from functools import partial
-from .utils import create_chunks
+from .utils import create_chunks, safe_bool
+from .event import Discrete
 
 
 def plot_calibration(raw, title='Calibration', show=True):
@@ -176,7 +177,7 @@ def _prepare_trellis(n_cells, max_col):
 
 
 def _draw_epochs_axes(epoch_idx, data, times, axes,
-                      title_str, axes_handler):
+                      title_str, axes_handler, discretes):
     """Aux functioin"""
     this = axes_handler[0]
     data = np.ma.masked_invalid(data)
@@ -219,13 +220,21 @@ def _epochs_navigation_onclick(event, params):
         pl.close(event.inaxes.get_figure())
 
     if here is not None and len(p['axes_handler']) > 1:
+        before = p['idx_handler'][0]
+        for ax in p['axes']:
+            if vars(ax)[before]['n_disc_lines']:
+                for l in ax.lines[-vars(ax)[before]['n_disc_lines']:]:
+                    del l
         p['idx_handler'].rotate(here)
         p['axes_handler'].rotate(here)
         this_idx = p['idx_handler'][0]
         data = p['epochs'].data[this_idx][:, p['picks']]
+        if p['discretes'] is not None:
+            discretes = Discrete([p['discretes'] for k in this_idx])
         _draw_epochs_axes(this_idx, data, p['times'], p['axes'],
                           p['title_str'],
-                          p['axes_handler'])
+                          p['axes_handler'],
+                          discretes)
             # XXX don't ask me why
         p['axes'][0].get_figure().canvas.draw()
 
@@ -255,7 +264,8 @@ def _epochs_axes_onclick(event, params):
 
 
 def plot_epochs(epochs, epoch_idx=None, picks=None, n_chunks=20,
-                title_str='#%003i', show=True, block=False):
+                title_str='#%003i', show=True, draw_events=None,
+                block=False):
     """ Visualize single trials using Trellis plot.
 
     Parameters
@@ -273,15 +283,13 @@ def plot_epochs(epochs, epoch_idx=None, picks=None, n_chunks=20,
         Defaults to None
     lines : array-like | list of tuple
         Events to draw as vertical lines
-    scalings : dict | None
-        Scale factors for the traces. If None, defaults to:
-        `dict(mag=1e-12, grad=4e-11, eeg=20e-6, eog=150e-6, ecg=5e-4, emg=1e-3,
-             ref_meg=1e-12, misc=1e-3, stim=1, resp=1, chpi=1e-4)`
     title_str : None | str
         The string formatting to use for axes titles. If None, no titles
         will be shown. Defaults expand to ``#001, #002, ...``
     show : bool
         Whether to show the figure or not.
+    draw_events : {saccades, blinks, fixations} | None
+        The events to draw as vertical lines.
     block : bool
         Whether to halt program execution until the figure is closed.
         Useful for rejecting bad trials on the fly by clicking on a
@@ -321,26 +329,41 @@ def plot_epochs(epochs, epoch_idx=None, picks=None, n_chunks=20,
     n_events = len(epochs.events)
     epoch_idx = epoch_idx[:n_events]
     idx_handler = deque(create_chunks(epoch_idx, n_chunks))
-
     # handle bads
     this_idx = idx_handler[0]
     fig, axes = _prepare_trellis(len(this_idx), max_col=5)
     axes_handler = deque(range(len(idx_handler)))
     data = np.ma.masked_invalid(epochs.data[this_idx][:, picks])
-    for ii, ax, data_ in zip(idx_handler[0], axes, data):
-        ax.plot(times, data_.T)
-        ax.axvline(0.0, color='orange', linestyle='--')
+    if draw_events is not None:
+        key = {k.strip('_'): k for k in epochs.info['discretes']}[draw_events]
+        discretes = vars(epochs)[key]
+        this_discretes = Discrete([discretes[k] for k in this_idx])
+    else:
+        discretes = None
+        this_discretes = Discrete()
+
+    for ii, ax, data_ in zip(this_idx, axes, data):
+        ax.plot(times, data_.T, color='steelblue')
+        ax.axvline(0.0, color='gray', linestyle='--')
+        n_disc_lines = 0
+        if discretes is not None:
+            if safe_bool(this_discretes[ii]):
+                for here in this_discretes[ii]['stime']:
+                    ax.axvline(here * 1e3, color='orange', linestyle='--')
+                    n_disc_lines += 1
         if title_str is not None:
             ax.set_title(title_str % ii, fontsize=12)
         ax.set_ylim(data.min(), data.max())
         ax.set_yticks([])
         ax.set_xticks([])
-        vars(ax)[axes_handler[0]] = {'idx': ii, 'reject': False}
+        vars(ax)[axes_handler[0]] = {'idx': ii, 'reject': False,
+                                     'n_disc_lines': n_disc_lines}
 
     # initialize memory
     for this_view, this_inds in zip(axes_handler, idx_handler):
         for ii, ax in zip(this_inds, axes):
-            vars(ax)[this_view] = {'idx': ii, 'reject': False}
+            vars(ax)[this_view] = {'idx': ii, 'reject': False,
+                                   'n_disc_lines': 0}
 
     # pl.tight_layout()
     navigation = figure_nobar(figsize=(3, 1.5))
@@ -363,7 +386,8 @@ def plot_epochs(epochs, epoch_idx=None, picks=None, n_chunks=20,
         'reject-quit': pl.mpl.widgets.Button(ax3, 'reject-quit'),
         'title_str': title_str,
         'reject_idx': [],
-        'axes_handler': axes_handler
+        'axes_handler': axes_handler,
+        'discretes': discretes
     }
     fig.canvas.mpl_connect('button_press_event',
                            partial(_epochs_axes_onclick, params=params))

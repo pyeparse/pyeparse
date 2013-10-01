@@ -39,4 +39,4 @@ pl.title('Post baseline saccade (X, pos)')
 pl.show()
 
 
-epochs.plot(picks=['xpos', 'ypos'])
+epochs.plot(picks=['xpos', 'ypos'], draw_events='saccades', n_chunks=15)
