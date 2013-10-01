@@ -158,6 +158,7 @@ class Raw(object):
         d['messages'] = _assemble_messages(messages)
 
         # set t0 to 0 and scale to seconds
+        assert len(self.samples['time'].unique()) == len(self.samples)
         self._t_zero = self.samples['time'][0]
         self.samples['time'] -= self._t_zero
         self.samples['time'] /= 1e3
@@ -215,7 +216,7 @@ class Raw(object):
         validations = list()
         lines = iter(calib_lines)
         for line in lines:
-            if '!CAL VALIDATION ' in line:
+            if '!CAL VALIDATION ' in line and not 'ABORTED' in line:
                 cal_kind = line.split('!CAL VALIDATION ')[1].split()[0]
                 n_points = int([c for c in cal_kind if c.isdigit()][0])
                 this_validation = []
