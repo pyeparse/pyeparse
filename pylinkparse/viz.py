@@ -183,12 +183,20 @@ def _draw_epochs_axes(epoch_idx, data, times, axes,
     data = np.ma.masked_invalid(data)
     for ii, data_, ax in zip(epoch_idx, data, axes):
         [l.set_data(times, d) for l, d in zip(ax.lines, data_)]
+        n_disc_lines = 0
+        if discretes is not None:
+            if safe_bool(discretes[ii]):
+                for here in discretes[ii]['stime']:
+                    ax.axvline(here * 1e3, color='orange', linestyle='--')
+                    n_disc_lines += 1
+                    vars(ax.lines[-1])['def-col'] = 'orange'
         if title_str is not None:
             ax.set_title(title_str % ii, fontsize=12)
         ax.set_ylim(data.min(), data.max())
         ax.set_yticks([])
         ax.set_xticks([])
         ax.get_figure().canvas.draw()
+        vars(ax)[this]['n_disc_lines'] = n_disc_lines
         if vars(ax)[this]['reject'] is True:
             #  memorizing reject
             [l.set_color((0.8, 0.8, 0.8)) for l in ax.lines]
@@ -199,7 +207,7 @@ def _draw_epochs_axes(epoch_idx, data, times, axes,
                 if k == this:
                     continue
                 if vars(ax).get(k, {}).get('reject', None) is True:
-                    [l.set_color('k') for l in ax.lines]
+                    [l.set_color(vars(l)['def-col']) for l in ax.lines]
                     ax.get_figure().canvas.draw()
                     break
 
@@ -220,22 +228,23 @@ def _epochs_navigation_onclick(event, params):
         pl.close(event.inaxes.get_figure())
 
     if here is not None and len(p['axes_handler']) > 1:
-        before = p['idx_handler'][0]
+        before = p['axes_handler'][0]
         for ax in p['axes']:
-            if vars(ax)[before]['n_disc_lines']:
-                for l in ax.lines[-vars(ax)[before]['n_disc_lines']:]:
-                    del l
+            assert all([ii in vars(ax) for ii in p['axes_handler']])
+            dd = -vars(ax)[before]['n_disc_lines']
+            if dd:
+                del ax.lines[dd:]
+                ax.get_figure().canvas.draw()
+            dd = 0
         p['idx_handler'].rotate(here)
         p['axes_handler'].rotate(here)
         this_idx = p['idx_handler'][0]
         data = p['epochs'].data[this_idx][:, p['picks']]
-        if p['discretes'] is not None:
-            discretes = Discrete([p['discretes'] for k in this_idx])
         _draw_epochs_axes(this_idx, data, p['times'], p['axes'],
                           p['title_str'],
                           p['axes_handler'],
-                          discretes)
-            # XXX don't ask me why
+                          p['discretes'])
+        # XXX don't ask me why
         p['axes'][0].get_figure().canvas.draw()
 
 
@@ -337,20 +346,20 @@ def plot_epochs(epochs, epoch_idx=None, picks=None, n_chunks=20,
     if draw_events is not None:
         key = {k.strip('_'): k for k in epochs.info['discretes']}[draw_events]
         discretes = vars(epochs)[key]
-        this_discretes = Discrete([discretes[k] for k in this_idx])
     else:
         discretes = None
-        this_discretes = Discrete()
 
     for ii, ax, data_ in zip(this_idx, axes, data):
         ax.plot(times, data_.T, color='steelblue')
         ax.axvline(0.0, color='gray', linestyle='--')
+        vars(ax.lines[-1])['def-col'] = 'gray'
         n_disc_lines = 0
         if discretes is not None:
-            if safe_bool(this_discretes[ii]):
-                for here in this_discretes[ii]['stime']:
+            if safe_bool(discretes[ii]):
+                for here in discretes[ii]['stime']:
                     ax.axvline(here * 1e3, color='orange', linestyle='--')
                     n_disc_lines += 1
+                    vars(ax.lines[-1])['def-col'] = 'orange'
         if title_str is not None:
             ax.set_title(title_str % ii, fontsize=12)
         ax.set_ylim(data.min(), data.max())
@@ -361,9 +370,11 @@ def plot_epochs(epochs, epoch_idx=None, picks=None, n_chunks=20,
 
     # initialize memory
     for this_view, this_inds in zip(axes_handler, idx_handler):
-        for ii, ax in zip(this_inds, axes):
-            vars(ax)[this_view] = {'idx': ii, 'reject': False,
-                                   'n_disc_lines': 0}
+        if this_view > 0:
+            # all other views than the current one
+            for ii, ax in enumerate(axes):
+                vars(ax)[this_view] = {'idx': ii, 'reject': False,
+                                       'n_disc_lines': 0}
 
     # pl.tight_layout()
     navigation = figure_nobar(figsize=(3, 1.5))
