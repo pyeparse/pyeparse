@@ -45,9 +45,8 @@ def find_events(raw, pattern, event_id):
         else:
             raise ValueError('Pattern not valid. Pass string or function')
         idx = df.msg.map(func).nonzero()[0]
-        out = np.nonzero(np.in1d(raw.samples['time'],
-                                 df['time'].ix[idx]))[0]
-        id_vector = np.repeat(event_id, len(idx)).astype(np.float64)
+        out = raw.time_as_index(df['time'].ix[idx])
+        id_vector = np.repeat(event_id, len(idx)).astype(np.int64)
         return np.c_[out, id_vector]
 
 
@@ -83,5 +82,5 @@ def find_custom_events(raw, pattern, event_id, prefix=True, sep=' '):
     events = np.array(events, dtype='f8')
     events -= raw._t_zero
     events /= 1e3
-    out = np.nonzero(np.in1d(raw.samples['time'], events))[0]
-    return np.c_[out, np.repeat(event_id, len(out))]
+    out = raw.time_as_index(events)
+    return np.c_[out, np.repeat(event_id, len(out))].astype(np.int64)

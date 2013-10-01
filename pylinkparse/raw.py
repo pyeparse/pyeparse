@@ -137,6 +137,7 @@ class Raw(object):
         if not all([x in self.info
                     for x in ['sample_fields', 'event_fields']]):
             raise RuntimeError('could not parse header')
+
         self.info['calibration'] = []
         if calibs:
             for calib_lines in calibs:
@@ -157,8 +158,13 @@ class Raw(object):
             d[s] = _assemble_data(check_line_index(kind), columns=cols)
         d['messages'] = _assemble_messages(messages)
 
+        is_unique = len(self.samples['time'].unique()) == len(self.samples)
+        if not is_unique:
+            raise RuntimeError('The time stamp found has non-unique values. '
+                               'Please check your conversion settings and '
+                               'make sure not to use the float option.')
+
         # set t0 to 0 and scale to seconds
-        assert len(self.samples['time'].unique()) == len(self.samples)
         self._t_zero = self.samples['time'][0]
         self.samples['time'] -= self._t_zero
         self.samples['time'] /= 1e3
