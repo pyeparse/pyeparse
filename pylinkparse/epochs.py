@@ -8,6 +8,7 @@ from functools import wraps
 import numpy as np
 from numpy.testing import assert_array_less
 from .event import Discrete
+from .viz import plot_epochs
 
 
 class Epochs(object):
@@ -158,6 +159,10 @@ class Epochs(object):
     def data_frame(self):
         return self._data
 
+    @property
+    def ch_names(self):
+        return self.data_frame.columns.tolist()
+
     def __getitem__(self, idx):
         out = self.copy()
         if isinstance(idx, basestring):
@@ -182,3 +187,40 @@ class Epochs(object):
         """Return a copy of Epochs.
         """
         return copy.deepcopy(self)
+
+    def plot(self, epoch_idx=None, picks=None, n_chunks=20,
+             title_str='#%003i', show=True, block=False):
+        """ Visualize single trials using Trellis plot.
+
+        Parameters
+        ----------
+        epoch_idx : array-like | int | None
+            The epochs to visualize. If None, the first 20 epochs are shown.
+            Defaults to None.
+        n_chunks : int
+            The number of chunks to use for display.
+        picks : array-like | None
+            Channels to be included. If None only good data channels are used.
+            Defaults to None
+        lines : array-like | list of tuple
+            Events to draw as vertical lines
+        title_str : None | str
+            The string formatting to use for axes titles. If None, no titles
+            will be shown. Defaults expand to ``#001, #002, ...``
+        show : bool
+            Whether to show the figure or not.
+        block : bool
+            Whether to halt program execution until the figure is closed.
+            Useful for rejecting bad trials on the fly by clicking on a
+            sub plot.
+
+
+        Returns
+        -------
+        fig : Instance of matplotlib.figure.Figure
+            The figure.
+        """
+
+        plot_epochs(epochs=self, epoch_idx=epoch_idx, picks=picks,
+                    n_chunks=n_chunks, title_str=title_str,
+                    show=show, block=block)

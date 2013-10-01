@@ -255,7 +255,6 @@ def _epochs_axes_onclick(event, params):
 
 
 def plot_epochs(epochs, epoch_idx=None, picks=None, n_chunks=20,
-                scalings=None,
                 title_str='#%003i', show=True, block=False):
     """ Visualize single trials using Trellis plot.
 
@@ -305,6 +304,12 @@ def plot_epochs(epochs, epoch_idx=None, picks=None, n_chunks=20,
 
     if picks is None:
         picks = np.arange(len(epochs.info['data_cols']))
+    elif all(p in epochs.ch_names for p in picks):
+        picks = [epochs.ch_names.index(k) for k in picks]
+    elif any(p not in epochs.ch_names and isinstance(p, basestring)
+             for p in picks):
+        wrong = [p for p in picks if p not in epochs.ch_names]
+        raise ValueError('Some channels are not difened: ' + '; '.join(wrong))
     if len(picks) < 1:
         raise RuntimeError('No appropriate channels found. Please'
                            ' check your picks')
@@ -351,7 +356,6 @@ def plot_epochs(epochs, epoch_idx=None, picks=None, n_chunks=20,
         'n_traces': n_traces,
         'picks': picks,
         'times': times,
-        'scalings': scalings,
         'axes': axes,
         'back': pl.mpl.widgets.Button(ax1, 'back'),
         'next': pl.mpl.widgets.Button(ax2, 'next'),
