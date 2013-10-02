@@ -6,7 +6,7 @@ import numpy as np
 import math
 from collections import deque
 from functools import partial
-from .utils import create_chunks, safe_bool
+from .utils import create_chunks, safe_bool, fwhm_kernel_2d
 from .event import Discrete
 
 
@@ -44,7 +44,8 @@ def plot_calibration(raw, title='Calibration', show=True):
 
 
 def plot_heatmap(xdata, ydata, width, height, cmap=None,
-                 show=True):
+                 vmin=None, colorbar=True,
+                 kernel=dict(size=20, half_width=10), show=True):
     """ Plot heatmap of X/Y positions on canvas, e.g., screen
 
     Parameters
@@ -77,19 +78,45 @@ def plot_heatmap(xdata, ydata, width, height, cmap=None,
                 (data[:, 1] > 0) &
                 (data[:, 0] < width) &
                 (data[:, 1] < height)].astype('i4')
+    if kernel is not None:
+        my_kernel = fwhm_kernel_2d(kernel['size'],
+                                   kernel['half_width'])
+        hsize = kernel['size'] / 2
     for x, y in inds:
-        canvas[x, y] += 1
-    fig = pl.figure()
-    pl.imshow(canvas, extent=[0, width, 0, height],
-              cmap=cmap, aspect='auto', origin='lower')
+        if kernel is not None:
+            kern_indx = np.array([x - hsize, x + hsize])
+            kern_indx[kern_indx < 0] = 0
+            kern_indx = slice(*kern_indx)
+            kern_indy = np.array([y - hsize, y + hsize])
+            kern_indy[kern_indy < 0] = 0
+            kern_indy = slice(*kern_indy)
+            this_part = canvas[kern_indx, kern_indy]
+            if this_part.shape == my_kernel.shape:
+                this_part += my_kernel
+        else:
+            canvas[x, y] += 1
 
+    fig = pl.figure()
+    if vmin is None:
+        vmin = canvas.min()
+        vmax = canvas.max()
+    else:
+        vmax = vmin
+        vmin = -vmin
+
+    pl.imshow(canvas, extent=[0, width, 0, height],
+              cmap=cmap, aspect='auto', origin='lower', vmin=vmin,
+              vmax=vmax)
+    if colorbar:
+        pl.colorbar()
     if show:
         pl.show()
     return fig, canvas
 
 
 def plot_heatmap_raw(raw, start=None, stop=None, cmap=None,
-                     title=None, show=True):
+                     title=None, vmin=None,  kernel=dict(size=20, width=10),
+                     show=True, colorbar=True):
     """ Plot heatmap of X/Y positions on canvas, e.g., screen
 
     Parameters
@@ -123,7 +150,8 @@ def plot_heatmap_raw(raw, start=None, stop=None, cmap=None,
     data, times = raw[start:stop]
     xdata, ydata = data[:, :2].T
     fig, _ = plot_heatmap(xdata=xdata, ydata=ydata, width=width,
-                          height=height, cmap=cmap, show=False)
+                          height=height, cmap=cmap, vmin=vmin,
+                          colorbar=False, show=False)
 
     if title is None:
         tstart, tstop = times[start:stop][[0, -1]]
@@ -131,6 +159,8 @@ def plot_heatmap_raw(raw, start=None, stop=None, cmap=None,
     pl.title(title)
     pl.xlabel('X position (px)')
     pl.ylabel('y position (px)')
+    if colorbar:
+        pl.colorbar()
     if show:
         pl.show()
     return fig

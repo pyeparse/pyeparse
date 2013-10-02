@@ -316,7 +316,8 @@ class Raw(object):
         return plot_calibration(raw=self, title=title, show=show)
 
     def plot_heatmap(self, start=None, stop=None, cmap=None,
-                     title=None, show=True):
+                     title=None, kernel=dict(size=100, half_width=50),
+                     colorbar=None, show=True):
         """ Plot heatmap of X/Y positions on canvas, e.g., screen
 
         Parameters
@@ -336,7 +337,8 @@ class Raw(object):
             The resulting figure object
         """
         plot_heatmap_raw(raw=self, start=start, stop=stop, cmap=cmap,
-                         title=title, show=show)
+                         title=title, kernel=kernel, colorbar=colorbar,
+                         show=show)
 
     def time_as_index(self, times):
         """Convert time to indices

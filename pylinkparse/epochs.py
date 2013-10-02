@@ -48,16 +48,18 @@ class Epochs(object):
         sample_inds = {k: [] for k in my_event_id}
         saccade_inds, fixation_inds, blink_inds = discrete_inds
         keep_idx = []
-        ii = 0
         min_samples = []
-        for event, this_id in events:
+        print len(events)
+        for ii, (event, this_id) in enumerate(events):
             if this_id not in my_event_id:
+                print 'not in event id'
                 continue
             this_time = times[event]
             this_tmin, this_tmax = this_time + tmin, this_time + tmax
             inds_min, inds_max = raw.time_as_index([this_tmin, this_tmax])
             if max([inds_min, inds_max]) >= len(raw.samples):
-                break
+                print 'epoch times corrupted', ii
+                continue
             inds = np.arange(inds_min, inds_max)
             min_samples.append(inds.shape[0])
 
@@ -69,8 +71,7 @@ class Epochs(object):
                                            (df['etime'] <= this_tmax))
                 parsed.append([event_in_window[0], ii, this_id, this_time])
             keep_idx.append(ii)
-            ii += 1
-
+        print len(keep_idx)
         self.events = events[keep_idx]
         min_samples = np.min(min_samples)
 

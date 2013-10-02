@@ -4,6 +4,7 @@
 
 from distutils.version import LooseVersion
 import pandas as pd
+import numpy as np
 
 
 def safe_bool(obj):
@@ -74,3 +75,24 @@ def check_line_index(lines):
         return lines
     else:   # 92mu -- fastest, please don't change
         return [str(x) + ' ' + y for x, y in enumerate(lines)]
+
+
+def fwhm_kernel_2d(size, fwhm, center=None):
+    """ Make a square gaussian kernel.
+
+    Note: adapted from https://gist.github.com/andrewgiessel/4635563
+
+    Parameters
+    ----------
+    size : int
+        The length of the square matrix to create.
+    fmhw : int
+        The full wdith at hald maximum value.
+
+    """
+    x = np.arange(0, size, 1, np.float64)
+    y = x[:, np.newaxis]
+    # center
+    x0 = y0 = size // 2
+
+    return np.exp(-4 * np.log(2) * ((x-x0) ** 2 + (y-y0)**2) / fwhm**2)
