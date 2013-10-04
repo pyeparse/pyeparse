@@ -48,32 +48,35 @@ def test_epochs_io():
         assert_equal(set(epochs2.events[:, -1]), {999})
         desired = len(epochs2.events) * len(epochs.times)
         assert_equal(epochs2.data_frame.shape[0], desired)
+        assert_equal(len(epochs2.saccades_), len(epochs2.events))
 
         epochs2 = epochs[[0, 1]]
         assert_equal(len(epochs2.events), 2)
         assert_equal(set(epochs2.events[:, -1]), {999})
         desired = len(epochs2.events) * len(epochs.times)
         assert_equal(epochs2.data_frame.shape[0], desired)
+        assert_equal(len(epochs2.saccades_), len(epochs2.events))
 
         epochs2 = epochs['a']
         assert_equal(len(epochs2.events), 2)
         assert_equal(set(epochs2.events[:, -1]), {999})
         desired = len(epochs2.events) * len(epochs.times)
         assert_equal(epochs2.data_frame.shape[0], desired)
-
+        assert_equal(len(epochs2.saccades_), len(epochs2.events))
 
         epochs2 = epochs[['a', 'b']]
         assert_equal(len(epochs2.events), 3)
         assert_equal(set(epochs2.events[:, -1]), {999, 77})
         desired = len(epochs2.events) * len(epochs.times)
         assert_equal(epochs2.data_frame.shape[0], desired)
-
+        assert_equal(len(epochs2.saccades_), len(epochs2.events))
 
         epochs2 = epochs[slice(1, 3)]
         assert_equal(len(epochs2.events), 2)
         assert_equal(set(epochs2.events[:, -1]), {999, 77})
         desired = len(epochs2.events) * len(epochs.times)
         assert_equal(epochs2.data_frame.shape[0], desired)
+        assert_equal(len(epochs2.saccades_), len(epochs2.events))
 
         data1 = epochs[0].data
         data2 = epochs.data_frame.ix[0, epochs.info['data_cols']].values

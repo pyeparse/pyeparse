@@ -187,7 +187,7 @@ class Epochs(object):
         out.events = out.events[idx]
         for discrete in self.info['discretes']:
             disc = vars(self)[discrete]
-            disc = Discrete(disc[k] for k in idx)
+            setattr(out, discrete, Discrete(disc[k] for k in idx))
         return out
 
     def copy(self):
