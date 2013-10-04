@@ -5,7 +5,7 @@
 import pandas as pd
 import copy
 import numpy as np
-from numpy.testing import assert_array_less
+from nose.tools import assert_true
 from .event import Discrete
 from .viz import plot_epochs
 
@@ -63,7 +63,8 @@ class Epochs(object):
             sample_inds[this_id].append([inds, ii])
             for kind, parsed in zip(raw.info['event_types'], discrete_inds):
                 df = raw.discrete.get(kind, kind)
-                assert_array_less(df['stime'], df['etime'])
+                assert_true(set([a <= b for a, b in
+                                df[['stime', 'etime']].values]) == set([True]))
                 event_in_window = np.where((df['stime'] >= this_tmin) &
                                            (df['etime'] <= this_tmax))
                 parsed.append([event_in_window[0], ii, this_id, this_time])
@@ -168,6 +169,14 @@ class Epochs(object):
                 raise ValueError('ID not found')
             idx = self.event_id[idx]
             idx = np.where(self.events[:, -1] == idx)[0]
+        elif (isinstance(idx, list) and isinstance(idx[0],
+                basestring)):
+            idx_list = []
+            for ii in idx:
+                ii = self.event_id[ii]
+                idx_list.append(np.where(self.events[:, -1] == ii)[0])
+            idx = np.concatenate(idx_list)
+
         elif np.isscalar(idx):
             idx = [idx]
         elif isinstance(idx, slice):
