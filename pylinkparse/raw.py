@@ -187,7 +187,9 @@ def _merge_run_data(run1, run2):
     offset = run1[0]['time'].values[-1] + (1. / sfreq)
     run2[0]['time'] += offset
     samples = pd.concat([run1[0], run2[0]], ignore_index=True)
-    diff = np.unique(np.diff(samples.time).astype(np.int64))
+    diff = np.diff(samples.time.values)
+    diff = np.ma.masked_invalid(diff).astype(np.int64)
+    diff = np.unique(diff)
     if len(diff) > 1:
         raise RuntimeError('Could not concatenate runs')
     discrete = {}
