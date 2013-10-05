@@ -366,7 +366,7 @@ class Raw(object):
     def __getitem__(self, idx):
         df = self.samples
         data = df[self.info['data_cols']].values[idx]
-        return data, df['time'].values
+        return data, df['time'].values[idx]
 
     def plot_calibration(self, title='Calibration', show=True):
         """Visualize calibration

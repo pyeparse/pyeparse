@@ -104,7 +104,8 @@ def plot_heatmap(xdata, ydata, width, height, cmap=None,
         vmax = vmin
         vmin = -vmin
 
-    pl.imshow(canvas, extent=[0, width, 0, height],
+    # flip canvas to match width > height
+    pl.imshow(canvas.T, extent=[0, width, 0, height],
               cmap=cmap, aspect='auto', origin='lower', vmin=vmin,
               vmax=vmax)
     if colorbar:
