@@ -49,6 +49,8 @@ class Epochs(object):
         saccade_inds, fixation_inds, blink_inds = discrete_inds
         keep_idx = []
         min_samples = []
+        # prevent the evil
+        events = events[events[:, 0].argsort()]
         for ii, (event, this_id) in enumerate(events):
             if this_id not in my_event_id:
                 continue
@@ -106,7 +108,8 @@ class Epochs(object):
             _samples.append(df)
             track_inds.extend([len(i) for i in ind])
 
-        sort_k = ['epoch_idx', 'time']  # important for multiple conditions
+        # important for multiple conditions
+        sort_k = ['epoch_idx', 'time']
         # ignore index to allow for sorting + keep unique values
         self._data = pd.concat(_samples, ignore_index=True)
         self._data = self._data.sort(sort_k)
@@ -169,7 +172,7 @@ class Epochs(object):
             idx = self.event_id[idx]
             idx = np.where(self.events[:, -1] == idx)[0]
         elif (isinstance(idx, list) and isinstance(idx[0],
-                basestring)):
+              basestring)):
             idx_list = []
             for ii in idx:
                 ii = self.event_id[ii]
@@ -180,8 +183,8 @@ class Epochs(object):
             idx = [idx]
         elif isinstance(idx, slice):
             idx = np.arange(*idx.indices(idx.stop))
-
-        midx = [i for i in out._data.index if i[0] in idx]
+        # XXX inquire whether Index.map works across pandas versions (fast)
+        midx = [i for i in out._data.index if i[0] in idx]  # ... slow
         out._data = out._data.ix[midx]
         out.events = out.events[idx]
         out._n_epochs = len(idx)

@@ -1,7 +1,7 @@
 import numpy as np
 from os import path as op
 from numpy.testing import assert_equal, assert_array_equal
-from nose.tools import assert_true
+from nose.tools import assert_true, assert_greater_equal
 from pylinkparse import Raw, Epochs
 import glob
 
@@ -12,7 +12,8 @@ def test_epochs_io():
     """Test epochs IO functionality"""
 
     tmin, tmax, event_id = -0.5, 1.5, 999
-    events = np.array([[1000, 999], [10000, 999], [12000, 77]])
+    # create some evil events
+    events = np.array([[12000, 77], [1000, 999], [10000, 999]])
     for fname in fnames:
         raw = Raw(fname)
         epochs = Epochs(raw, events, event_id, tmin, tmax)
@@ -22,11 +23,13 @@ def test_epochs_io():
         assert_equal(len(epochs.events), 2)
         assert_equal(epochs.data_frame.shape[0] / epochs._n_times,
                      len(epochs.events))
+        assert_greater_equal(epochs.data_frame['time'].diff().min(), 0)
 
         epochs = Epochs(raw, events, dict(a=999, b=77), tmin, tmax)
         assert_equal(len(epochs.events), 3)
         assert_equal(epochs.data_frame.shape[0] / epochs._n_times,
                      len(epochs.events))
+        assert_greater_equal(epochs.data_frame['time'].diff().min(), 0)
 
         for disc in epochs.info['discretes']:
             this_disc = vars(epochs)[disc]
@@ -49,13 +52,15 @@ def test_epochs_io():
         desired = len(epochs2.events) * len(epochs.times)
         assert_equal(epochs2.data_frame.shape[0], desired)
         assert_equal(len(epochs2.saccades_), len(epochs2.events))
+        assert_greater_equal(epochs2.data_frame['time'].diff().min(), 0)
 
-        epochs2 = epochs[[0, 1]]
+        epochs2 = epochs[[1, 0]]
         assert_equal(len(epochs2.events), 2)
         assert_equal(set(epochs2.events[:, -1]), {999})
         desired = len(epochs2.events) * len(epochs.times)
         assert_equal(epochs2.data_frame.shape[0], desired)
         assert_equal(len(epochs2.saccades_), len(epochs2.events))
+        assert_greater_equal(epochs2.data_frame['time'].diff().min(), 0)
 
         epochs2 = epochs['a']
         assert_equal(len(epochs2.events), 2)
@@ -63,6 +68,7 @@ def test_epochs_io():
         desired = len(epochs2.events) * len(epochs.times)
         assert_equal(epochs2.data_frame.shape[0], desired)
         assert_equal(len(epochs2.saccades_), len(epochs2.events))
+        assert_greater_equal(epochs2.data_frame['time'].diff().min(), 0)
 
         epochs2 = epochs[['a', 'b']]
         assert_equal(len(epochs2.events), 3)
@@ -70,6 +76,7 @@ def test_epochs_io():
         desired = len(epochs2.events) * len(epochs.times)
         assert_equal(epochs2.data_frame.shape[0], desired)
         assert_equal(len(epochs2.saccades_), len(epochs2.events))
+        assert_greater_equal(epochs2.data_frame['time'].diff().min(), 0)
 
         epochs2 = epochs[slice(1, 3)]
         assert_equal(len(epochs2.events), 2)
@@ -77,6 +84,7 @@ def test_epochs_io():
         desired = len(epochs2.events) * len(epochs.times)
         assert_equal(epochs2.data_frame.shape[0], desired)
         assert_equal(len(epochs2.saccades_), len(epochs2.events))
+        assert_greater_equal(epochs2.data_frame['time'].diff().min(), 0)
 
         data1 = epochs[0].data
         data2 = epochs.data_frame.ix[0, epochs.info['data_cols']].values
