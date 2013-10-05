@@ -178,12 +178,12 @@ class Epochs(object):
                 ii = self.event_id[ii]
                 idx_list.append(np.where(self.events[:, -1] == ii)[0])
             idx = np.concatenate(idx_list)
-
         elif np.isscalar(idx):
             idx = [idx]
         elif isinstance(idx, slice):
             idx = np.arange(*idx.indices(idx.stop))
         # XXX inquire whether Index.map works across pandas versions (fast)
+        idx = np.sort(idx)
         midx = [i for i in out._data.index if i[0] in idx]  # ... slow
         out._data = out._data.ix[midx]
         out.events = out.events[idx]
