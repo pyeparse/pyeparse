@@ -135,11 +135,10 @@ class Epochs(object):
     def next(self, return_event_id=False):
         """To make iteration over epochs easy.
         """
-
         if self._current >= self._n_epochs:
             raise StopIteration
         epoch = self.data_frame.ix[self._current]
-        epoch = epoch[self.info['data_cols']].values
+        epoch = epoch[self.info['data_cols']].values.T
         self._current += 1
         if not return_event_id:
             return epoch
@@ -160,7 +159,7 @@ class Epochs(object):
 
     @property
     def ch_names(self):
-        return self.data_frame.columns.tolist()
+        return [k for k in self.data_frame.columns]
 
     def __getitem__(self, idx):
         out = self.copy()
@@ -185,6 +184,7 @@ class Epochs(object):
         midx = [i for i in out._data.index if i[0] in idx]
         out._data = out._data.ix[midx]
         out.events = out.events[idx]
+        out._n_epochs = len(idx)
         for discrete in self.info['discretes']:
             disc = vars(self)[discrete]
             setattr(out, discrete, Discrete(disc[k] for k in idx))

@@ -84,3 +84,7 @@ def test_epochs_io():
                               len(epochs.times),
                               len(epochs.info['data_cols']))
         assert_array_equal(data1, np.transpose(data2, [0, 2, 1]))
+
+        for e in epochs:
+            assert_true(np.argmin(e.shape) == 0)
+        assert_array_equal(e, epochs.data[-1])

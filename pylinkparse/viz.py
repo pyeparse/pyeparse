@@ -352,7 +352,8 @@ def plot_epochs(epochs, epoch_idx=None, picks=None, n_chunks=20,
     if picks is None:
         picks = np.arange(len(epochs.info['data_cols']))
     elif all(p in epochs.ch_names for p in picks):
-        picks = [epochs.ch_names.index(k) for k in picks]
+        # epochs.data does not include time 
+        picks = [epochs.ch_names.index(k) -1 for k in picks]
     elif any(p not in epochs.ch_names and isinstance(p, basestring)
              for p in picks):
         wrong = [p for p in picks if p not in epochs.ch_names]

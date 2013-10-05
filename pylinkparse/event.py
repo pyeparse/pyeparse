@@ -44,9 +44,9 @@ def find_events(raw, pattern, event_id):
             func = lambda x: pattern in x
         else:
             raise ValueError('Pattern not valid. Pass string or function')
-        idx = df.msg.map(func).nonzero()[0]
-        out = raw.time_as_index(df['time'].ix[idx])
-        id_vector = np.repeat(event_id, len(idx)).astype(np.int64)
+        my_bool = df.msg.map(func)
+        out = raw.time_as_index(df['time'].ix[my_bool.nonzero()[0]])
+        id_vector = np.repeat(event_id, len(out)).astype(np.int64)
         return np.c_[out, id_vector]
 
 

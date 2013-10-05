@@ -30,6 +30,13 @@ epochs.data_frame.ix[3, ['xpos', 'ypos']].plot()
 # find epochs withouth loss of tracking / blinks
 print len([e for e in epochs if not np.isnan(e).any()])
 
+pl.figure()
+pl.title('Superimposed saccade responses')
+n_trials = 12  # first 12 trials
+for epoch in epochs[:n_trials]:
+    pl.plot(epochs.times * 1e3, epoch[0].T)
+pl.show()
+
 time_mask = epochs.times > 0
 times = epochs.times * 1e3
 
@@ -38,5 +45,5 @@ pl.plot(times[time_mask], epochs.data[0, 0, time_mask])
 pl.title('Post baseline saccade (X, pos)')
 pl.show()
 
-
-epochs.plot(picks=['xpos', 'ypos'], draw_events='saccades', n_chunks=15)
+# plot single trials
+epochs.plot(picks=['xpos'], draw_events='saccades')
