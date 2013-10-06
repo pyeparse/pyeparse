@@ -199,8 +199,8 @@ class Epochs(object):
         return copy.deepcopy(self)
 
     def plot(self, epoch_idx=None, picks=None, n_chunks=20,
-             title_str='#%003i', show=True, draw_events=None,
-             block=False):
+             title_str='#%003i', show=True, draw_discrete=None,
+             discrete_colors=None, block=False):
         """ Visualize single trials using Trellis plot.
 
         Parameters
@@ -220,13 +220,14 @@ class Epochs(object):
             will be shown. Defaults expand to ``#001, #002, ...``
         show : bool
             Whether to show the figure or not.
-        draw_events : {saccades, blinks, fixations} | None
+        draw_discrete : {saccades, blinks, fixations} | list-like | None |
             The events to draw as vertical lines.
+        discrete_colors: : list-like | None
+            list of str or color objects with length of discrete events drawn.
         block : bool
             Whether to halt program execution until the figure is closed.
             Useful for rejecting bad trials on the fly by clicking on a
             sub plot.
-
 
         Returns
         -------
@@ -236,4 +237,6 @@ class Epochs(object):
 
         plot_epochs(epochs=self, epoch_idx=epoch_idx, picks=picks,
                     n_chunks=n_chunks, title_str=title_str,
-                    show=show, draw_events=draw_events, block=block)
+                    show=show, draw_discrete=draw_discrete,
+                    discrete_colors=discrete_colors,
+                    block=block)

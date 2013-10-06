@@ -46,4 +46,4 @@ pl.title('Post baseline saccade (X, pos)')
 pl.show()
 
 # plot single trials
-epochs.plot(picks=['xpos'], draw_events='saccades')
+epochs.plot(picks=['xpos'], draw_discrete='saccades')

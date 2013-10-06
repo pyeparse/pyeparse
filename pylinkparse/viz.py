@@ -7,7 +7,6 @@ import math
 from collections import deque
 from functools import partial
 from .utils import create_chunks, safe_bool, fwhm_kernel_2d
-from .event import Discrete
 
 
 def plot_calibration(raw, title='Calibration', show=True):
@@ -305,8 +304,8 @@ def _epochs_axes_onclick(event, params):
 
 
 def plot_epochs(epochs, epoch_idx=None, picks=None, n_chunks=20,
-                title_str='#%003i', show=True, draw_events=None,
-                block=False):
+                title_str='#%003i', show=True, draw_discrete=None,
+                discrete_colors=None, block=False):
     """ Visualize single trials using Trellis plot.
 
     Parameters
@@ -329,8 +328,10 @@ def plot_epochs(epochs, epoch_idx=None, picks=None, n_chunks=20,
         will be shown. Defaults expand to ``#001, #002, ...``
     show : bool
         Whether to show the figure or not.
-    draw_events : {saccades, blinks, fixations} | None
+    draw_discrete : {saccades, blinks, fixations} | list-like | None |
         The events to draw as vertical lines.
+    discrete_colors: : list-like | None
+        list of str or color objects with length of discrete events drawn.
     block : bool
         Whether to halt program execution until the figure is closed.
         Useful for rejecting bad trials on the fly by clicking on a
@@ -354,8 +355,10 @@ def plot_epochs(epochs, epoch_idx=None, picks=None, n_chunks=20,
     if picks is None:
         picks = np.arange(len(epochs.info['data_cols']))
     elif all(p in epochs.ch_names for p in picks):
-        # epochs.data does not include time 
-        picks = [epochs.ch_names.index(k) -1 for k in picks]
+        # epochs.data does not include time
+        ch_names = [ch for ch in epochs.ch_names if ch in
+                    epochs.info['data_cols']]
+        picks = [ch_names.index(k) for k in picks]
     elif any(p not in epochs.ch_names and isinstance(p, basestring)
              for p in picks):
         wrong = [p for p in picks if p not in epochs.ch_names]
@@ -363,6 +366,10 @@ def plot_epochs(epochs, epoch_idx=None, picks=None, n_chunks=20,
     if len(picks) < 1:
         raise RuntimeError('No appropriate channels found. Please'
                            ' check your picks')
+    if discrete_colors is not None:
+        if len(discrete_colors) != len(epochs.events):
+            raise ValueError('The length of `discrete_colors` must equal '
+                             'the number of epochs.')
 
     times = epochs.times * 1e3
     n_traces = len(picks)
@@ -376,9 +383,12 @@ def plot_epochs(epochs, epoch_idx=None, picks=None, n_chunks=20,
     fig, axes = _prepare_trellis(len(this_idx), max_col=5)
     axes_handler = deque(range(len(idx_handler)))
     data = np.ma.masked_invalid(epochs.data[this_idx][:, picks])
-    if draw_events is not None:
-        key = {k.strip('_'): k for k in epochs.info['discretes']}[draw_events]
-        discretes = vars(epochs)[key]
+    if draw_discrete is not None:
+        key = {k.strip('_'): k for k in
+               epochs.info['discretes']}[draw_discrete]
+        discretes = [d['stime'].values * 1e3 for d in vars(epochs)[key]
+                     if safe_bool(d)]
+
     else:
         discretes = None
 
@@ -387,12 +397,16 @@ def plot_epochs(epochs, epoch_idx=None, picks=None, n_chunks=20,
         ax.axvline(0.0, color='gray', linestyle='--')
         vars(ax.lines[-1])['def-col'] = 'gray'
         n_disc_lines = 0
+        if discrete_colors is not None:
+            color = discrete_colors[ii]
+        else:
+            color = 'orange'
         if discretes is not None:
             if safe_bool(discretes[ii]):
-                for here in discretes[ii]['stime']:
-                    ax.axvline(here * 1e3, color='orange', linestyle='--')
+                for here in discretes[ii]:
+                    ax.axvline(here, color=color, linestyle='--')
                     n_disc_lines += 1
-                    vars(ax.lines[-1])['def-col'] = 'orange'
+                    vars(ax.lines[-1])['def-col'] = color
         if title_str is not None:
             ax.set_title(title_str % ii, fontsize=12)
         ax.set_ylim(data.min(), data.max())
