@@ -208,21 +208,26 @@ def _prepare_trellis(n_cells, max_col):
 
 
 def _draw_epochs_axes(epoch_idx, data, times, axes,
-                      title_str, axes_handler, discretes):
+                      title_str, axes_handler, discretes,
+                      discrete_colors):
     """Aux functioin"""
     this = axes_handler[0]
     data = np.ma.masked_invalid(data)
     for ii, data_, ax in zip(epoch_idx, data, axes):
         [l.set_data(times, d) for l, d in zip(ax.lines, data_)]
         n_disc_lines = 0
+        if discrete_colors is not None:
+            color = discrete_colors[ii]
+        else:
+            color = 'orange'
         if discretes is not None:
             if safe_bool(discretes[ii]):
-                for here in discretes[ii]['stime']:
-                    ax.axvline(here * 1e3, color='orange', linestyle='--')
+                for here in discretes[ii]:
+                    ax.axvline(here, color=color, linestyle='--')
                     n_disc_lines += 1
-                    vars(ax.lines[-1])['def-col'] = 'orange'
+                    vars(ax.lines[-1])['def-col'] = color
         if title_str is not None:
-            ax.set_title(title_str % ii, fontsize=12)
+            _set_title(ax, title_str, ii)
         ax.set_ylim(data.min(), data.max())
         ax.set_yticks([])
         ax.set_xticks([])
@@ -274,7 +279,8 @@ def _epochs_navigation_onclick(event, params):
         _draw_epochs_axes(this_idx, data, p['times'], p['axes'],
                           p['title_str'],
                           p['axes_handler'],
-                          p['discretes'])
+                          p['discretes'],
+                          p['discrete_colors'])
         # XXX don't ask me why
         p['axes'][0].get_figure().canvas.draw()
 
@@ -303,6 +309,17 @@ def _epochs_axes_onclick(event, params):
     ax.get_figure().canvas.draw()
 
 
+def _set_title(ax, title_str, ii):
+    """Handle titles"""
+    if isinstance(title_str, basestring):
+        title = title_str % ii
+    elif title_str is None:
+        title = '#%00i' % ii
+    else:
+        title = title_str[ii]
+    ax.set_title(title, fontsize=12)
+
+
 def plot_epochs(epochs, epoch_idx=None, picks=None, n_chunks=20,
                 title_str='#%003i', show=True, draw_discrete=None,
                 discrete_colors=None, block=False):
@@ -323,9 +340,10 @@ def plot_epochs(epochs, epoch_idx=None, picks=None, n_chunks=20,
         Defaults to None
     lines : array-like | list of tuple
         Events to draw as vertical lines
-    title_str : None | str
+    title_str : None | str | list-like
         The string formatting to use for axes titles. If None, no titles
-        will be shown. Defaults expand to ``#001, #002, ...``
+        will be shown. Defaults expand to ``#001, #002, ...``. If list-like,
+        must be of same length as epochs.events.
     show : bool
         Whether to show the figure or not.
     draw_discrete : {saccades, blinks, fixations} | list-like | None |
@@ -336,7 +354,6 @@ def plot_epochs(epochs, epoch_idx=None, picks=None, n_chunks=20,
         Whether to halt program execution until the figure is closed.
         Useful for rejecting bad trials on the fly by clicking on a
         sub plot.
-
 
     Returns
     -------
@@ -383,18 +400,19 @@ def plot_epochs(epochs, epoch_idx=None, picks=None, n_chunks=20,
     fig, axes = _prepare_trellis(len(this_idx), max_col=5)
     axes_handler = deque(range(len(idx_handler)))
     data = np.ma.masked_invalid(epochs.data[this_idx][:, picks])
-    if draw_discrete is not None:
+    if isinstance(draw_discrete, basestring):
         key = {k.strip('_'): k for k in
                epochs.info['discretes']}[draw_discrete]
         discretes = [d['stime'].values * 1e3 for d in vars(epochs)[key]
                      if safe_bool(d)]
-
-    else:
+    elif draw_discrete is None:
         discretes = None
+    else:
+        discretes = draw_discrete
 
     for ii, ax, data_ in zip(this_idx, axes, data):
         ax.plot(times, data_.T, color='steelblue')
-        ax.axvline(0.0, color='gray', linestyle='--')
+        ax.axvline(0.0, color='gray')
         vars(ax.lines[-1])['def-col'] = 'gray'
         n_disc_lines = 0
         if discrete_colors is not None:
@@ -408,7 +426,7 @@ def plot_epochs(epochs, epoch_idx=None, picks=None, n_chunks=20,
                     n_disc_lines += 1
                     vars(ax.lines[-1])['def-col'] = color
         if title_str is not None:
-            ax.set_title(title_str % ii, fontsize=12)
+            _set_title(ax, title_str, ii)
         ax.set_ylim(data.min(), data.max())
         ax.set_yticks([])
         ax.set_xticks([])
@@ -445,7 +463,8 @@ def plot_epochs(epochs, epoch_idx=None, picks=None, n_chunks=20,
         'title_str': title_str,
         'reject_idx': [],
         'axes_handler': axes_handler,
-        'discretes': discretes
+        'discretes': discretes,
+        'discrete_colors': discrete_colors
     }
     fig.canvas.mpl_connect('button_press_event',
                            partial(_epochs_axes_onclick, params=params))
