@@ -235,8 +235,8 @@ class Epochs(object):
             The figure.
         """
 
-        plot_epochs(epochs=self, epoch_idx=epoch_idx, picks=picks,
-                    n_chunks=n_chunks, title_str=title_str,
-                    show=show, draw_discrete=draw_discrete,
-                    discrete_colors=discrete_colors,
-                    block=block)
+        return plot_epochs(epochs=self, epoch_idx=epoch_idx, picks=picks,
+                           n_chunks=n_chunks, title_str=title_str,
+                           show=show, draw_discrete=draw_discrete,
+                           discrete_colors=discrete_colors,
+                           block=block)

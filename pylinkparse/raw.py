@@ -103,6 +103,7 @@ def _parse_def_lines(info, def_lines):
     _parse_put_event_format(info, format_lines)
     return info
 
+
 def _parse_calibration(info, calib_lines):
     """Parse EL header information"""
     validations = list()
@@ -129,7 +130,7 @@ def _parse_calibration(info, calib_lines):
             # empty line block tail
             while True:
                 this_line = lines.next()
-                if not this_line.strip('\n'):
+                if not this_line.strip('\n') or 'MSG' in line:
                     break
                 additional_lines.append(this_line)
             line += '  '
@@ -139,6 +140,7 @@ def _parse_calibration(info, calib_lines):
                                              dtype='i8')
 
     return validations[-1]
+
 
 def _parse_put_event_format(info, def_lines):
     """Figure out what all our fields are from SAMPLES & EVENTS lines"""
@@ -178,7 +180,7 @@ def _parse_put_event_format(info, def_lines):
 
 
 def _merge_run_data(run1, run2):
-    """Merge two runs -- use with reduce""" 
+    """Merge two runs -- use with reduce"""
     if run1[2]['sfreq'] != run2[2]['sfreq']:
         raise RuntimeError('Sample frequencies differ across runs')
     if safe_bool(run1[0].columns != run2[0].columns):
@@ -194,7 +196,7 @@ def _merge_run_data(run1, run2):
         raise RuntimeError('Could not concatenate runs')
     discrete = {}
     for ((kind1, data1), (kind2, data2)) in zip(run1[1].items(),
-                                                run2[1].items()): 
+                                                run2[1].items()):
         if 'stime' in data2:
             data2['stime'] += offset
             data2['etime'] += offset
@@ -217,7 +219,7 @@ class Raw(object):
         The name of the ASCII converted EDF file.
     """
     def __init__(self, fname):
-        
+
         def_lines, samples, esacc, efix, eblink, calibs, preamble, \
             messages = [list() for _ in range(8)]
         started = False
@@ -249,17 +251,20 @@ class Raw(object):
                         # Add another calibration section, set split for
                         # raw parser
                         if samples:
-                            runs.append(dict(def_lines=def_lines, samples=samples,
-                                             esacc=esacc, efix=efix, eblink=eblink,
-                                             calibs=calibs, preamble=preamble, 
+                            runs.append(dict(def_lines=def_lines,
+                                             samples=samples,
+                                             esacc=esacc, efix=efix,
+                                             eblink=eblink,
+                                             calibs=calibs, preamble=preamble,
                                              messages=messages))
-                            def_lines, samples, esacc, efix, eblink, calibs, preamble, \
+                            def_lines, samples, esacc, efix, eblink, calibs, \
+                                preamble, \
                                 messages = [list() for _ in range(8)]
                         calib_lines = []
                         while True:
                             subline = fid.next()
                             if subline.startswith('START'):
-                               break
+                                break
                             calib_lines.append(subline)
                         calibs.extend(calib_lines)
                     elif any([line.startswith(k) for k in

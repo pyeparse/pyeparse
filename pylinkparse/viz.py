@@ -213,6 +213,7 @@ def _draw_epochs_axes(epoch_idx, data, times, axes,
     """Aux functioin"""
     this = axes_handler[0]
     data = np.ma.masked_invalid(data)
+    import pylab as pl
     for ii, data_, ax in zip(epoch_idx, data, axes):
         [l.set_data(times, d) for l, d in zip(ax.lines, data_)]
         n_disc_lines = 0
@@ -229,8 +230,15 @@ def _draw_epochs_axes(epoch_idx, data, times, axes,
         if title_str is not None:
             _set_title(ax, title_str, ii)
         ax.set_ylim(data.min(), data.max())
-        ax.set_yticks([])
-        ax.set_xticks([])
+        if ii % 5:
+            [l.set_visible(0) for l in ax.get_yticklabels()]
+        if ii < len(epoch_idx) - 5:
+            [l.set_visible(0) for l in ax.get_xticklabels()]
+        else:
+            [l.set_fontsize(8) for l in ax.get_xticklabels()]
+            [l.set_fontsize(8) for l in ax.get_yticklabels()]
+            labels = ax.get_xticklabels()
+            pl.setp(labels, rotation=45)
         ax.get_figure().canvas.draw()
         vars(ax)[this]['n_disc_lines'] = n_disc_lines
         if vars(ax)[this]['reject'] is True:
@@ -410,8 +418,9 @@ def plot_epochs(epochs, epoch_idx=None, picks=None, n_chunks=20,
     else:
         discretes = draw_discrete
 
-    for ii, ax, data_ in zip(this_idx, axes, data):
-        ax.plot(times, data_.T, color='steelblue')
+    labelfontsize = 10
+    for i_ax, (ii, ax, data_) in enumerate(zip(this_idx, axes, data)):
+        ax.plot(times, data_.T, color='k')
         ax.axvline(0.0, color='gray')
         vars(ax.lines[-1])['def-col'] = 'gray'
         n_disc_lines = 0
@@ -428,10 +437,22 @@ def plot_epochs(epochs, epoch_idx=None, picks=None, n_chunks=20,
         if title_str is not None:
             _set_title(ax, title_str, ii)
         ax.set_ylim(data.min(), data.max())
-        ax.set_yticks([])
-        ax.set_xticks([])
+        if i_ax % 5:
+            [l.set_visible(0) for l in ax.get_yticklabels()]
+        else:
+            [l.set_fontsize(labelfontsize) for l in ax.get_yticklabels()]
+
+        if i_ax < len(this_idx) - 5:
+            [l.set_visible(0) for l in ax.get_xticklabels()]
+        else:
+            [l.set_fontsize(labelfontsize) for l in ax.get_xticklabels()]
+            labels = ax.get_xticklabels()
+            pl.setp(labels, rotation=45)
         vars(ax)[axes_handler[0]] = {'idx': ii, 'reject': False,
                                      'n_disc_lines': n_disc_lines}
+
+    # XXX find smarter way to to tight layout for incomplete plots
+    # fig.tight_layout()
 
     # initialize memory
     for this_view, this_inds in zip(axes_handler, idx_handler):
@@ -441,7 +462,6 @@ def plot_epochs(epochs, epoch_idx=None, picks=None, n_chunks=20,
                 vars(ax)[this_view] = {'idx': ii, 'reject': False,
                                        'n_disc_lines': 0}
 
-    # pl.tight_layout()
     navigation = figure_nobar(figsize=(3, 1.5))
     from matplotlib import gridspec
     gs = gridspec.GridSpec(2, 2)
