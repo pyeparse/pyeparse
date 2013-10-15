@@ -95,4 +95,4 @@ def fwhm_kernel_2d(size, fwhm, center=None):
     # center
     x0 = y0 = size // 2
 
-    return np.exp(-4 * np.log(2) * ((x-x0) ** 2 + (y-y0)**2) / fwhm**2)
+    return np.exp(-4 * np.log(2) * ((x - x0) ** 2 + (y - y0) ** 2) / fwhm ** 2)

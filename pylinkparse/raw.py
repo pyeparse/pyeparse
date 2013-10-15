@@ -87,6 +87,7 @@ def _parse_pramble(info, preamble_lines):
             info['camera_config'] = _extract_sys_info(line)
     return info
 
+
 def _parse_def_lines(info, def_lines):
     format_lines = list()
     for line in def_lines:
@@ -126,7 +127,7 @@ def _parse_calibration(info, calib_lines):
             validations.append(this_validation)
         elif any([k in line for k in EDF.MLINES]):
             additional_lines = []
-            # additiona lines on our way to the
+            # additional lines on our way to the
             # empty line block tail
             while True:
                 this_line = lines.next()
@@ -285,7 +286,7 @@ class Raw(object):
                                            % line)
         runs.append(dict(def_lines=def_lines, samples=samples,
                          esacc=esacc, efix=efix, eblink=eblink,
-                         calibs=calibs, preamble=preamble, 
+                         calibs=calibs, preamble=preamble,
                          messages=messages))
 
         for keys, values in zip(zip(*[d.keys() for d in runs]),
@@ -300,7 +301,7 @@ class Raw(object):
             info = {}
             if run['preamble']:
                 _parse_pramble(info, run['preamble'])
-            
+
             _parse_def_lines(info, run['def_lines'])
             if not all([x in info
                         for x in ['sample_fields', 'event_fields']]):
@@ -323,14 +324,15 @@ class Raw(object):
                            EDF.BLINK_FIELDS]
             for s, kind, cols in zip(kind_str, kind_list, column_list):
                 discrete[s] = _assemble_data(check_line_index(kind),
-                                              columns=cols)
+                                             columns=cols)
             discrete['messages'] = _assemble_messages(run['messages'])
 
             is_unique = len(samples['time'].unique()) == len(samples)
             if not is_unique:
-                raise RuntimeError('The time stamp found has non-unique values. '
-                                   'Please check your conversion settings and '
-                                   'make sure not to use the float option.')
+                raise RuntimeError('The time stamp found has non-unique '
+                                   'values. Please check your conversion '
+                                   'settings and make sure not to use the '
+                                   'float option.')
 
             # set t0 to 0 and scale to seconds
             _t_zero = samples['time'][0]
@@ -353,14 +355,15 @@ class Raw(object):
             info_runs.append(info)
             discrete_runs.append(discrete)
             samples_runs.append(samples)
-        
+
         assert len(samples_runs) == len(discrete_runs) == len(info_runs)
         if len(samples_runs) == 1:
             self.info = info_runs[0]
             self.samples = samples_runs[0]
             self.discrete = discrete_runs[0]
         else:
-            one_run = reduce(_merge_run_data,  zip(*[samples_runs, discrete_runs,
+            one_run = reduce(_merge_run_data,  zip(*[samples_runs,
+                                                     discrete_runs,
                                                      info_runs]))
             self.samples, self.discrete, self.info = one_run
         self.info['fname'] = fname
