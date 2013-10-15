@@ -5,6 +5,14 @@
 This package is designed for interactive as well as scripting-oriented processing
 of eye tracking data
 
+
+Note
+^^^^
+
+This package has alpha status and is only tested for the author's use cases.
+Contributions are welcome but at the moment we can't give strong support.
+
+
 Get more information
 ^^^^^^^^^^^^^^^^^^^^
 
