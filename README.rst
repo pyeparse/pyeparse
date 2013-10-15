@@ -6,11 +6,17 @@ This package is designed for interactive as well as scripting-oriented processin
 of eye tracking data
 
 
-Note
-^^^^
+Notes
+^^^^^
 
-This package has alpha status and is only tested for the author's use cases.
-Contributions are welcome but at the moment we can't give strong support.
+A few things to make clear:
+
+    * This package has alpha status and is only tested for the author's use cases. Contributions are welcome but at the moment we can't give strong support.
+
+    * We tested the codes for different datasets and EyeLink devices. Still the parsing support will be limited to the cases we encountered. Reports and feedback are welcome.
+
+    * The philosophy behind this package strongly draws from MNE-Python, a package for MEG/EEG data processing hosted by authors:
+    https://github.com/mne-tools/mne-python
 
 
 Get more information
