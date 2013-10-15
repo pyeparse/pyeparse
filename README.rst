@@ -11,7 +11,7 @@ Notes
 
 A few things to make clear:
 
-    * This package has alpha status and is only tested for the author's use cases. Contributions are welcome but at the moment we can't give strong support.
+    * This package has alpha status and is only tested for the author's use cases. Contributions are welcome but at the moment we can't provide strong support.
 
     * We tested the codes for different datasets and EyeLink devices. Still the parsing support will be limited to the cases we encountered. Reports and feedback are welcome.
 
