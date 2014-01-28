@@ -50,7 +50,7 @@ def _get_fields(line):
     fields = list()
     for fi, f in enumerate(line[3:]):
         if f == 'RATE':
-            sfreq = float(line[fi + 4])
+            sfreq = float(line[fi + 4].replace(',', '.'))
         elif f == 'TRACKING':
             track = line[fi + 4]
         elif f == 'FILTER':
