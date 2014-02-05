@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
-from numpy.testing import assert_equal, assert_array_equal
+from nose.tools import assert_true
+from numpy.testing import assert_equal
 from pylinkparse import Raw
 from pylinkparse.event import find_custom_events, Discrete
 
@@ -16,6 +17,7 @@ def test_find_custom_events():
     assert_equal(len(events), 24)
     assert_equal(set(events[:, 1]), set([1]))
     events2 = raw.find_events('user-event', 1)
+    assert_true(len(events2) > 0)
     # XXX broken since continuity is not fixed for custom events
     #     read after parsing
     # assert_array_equal(events, events2)

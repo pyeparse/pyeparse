@@ -13,7 +13,7 @@ def test_raw_io():
     """Test raw IO functionality"""
     for fi, fname in enumerate(fnames):
         raw = Raw(fname)
-        print raw  # test repr works
+        print(raw)  # test repr works
 
         # tests dtypes are parsed correctly that is double only
         dtypes = raw.samples.dtypes[:-1].unique()
