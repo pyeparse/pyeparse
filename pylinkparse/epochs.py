@@ -5,9 +5,9 @@
 import pandas as pd
 import copy
 import numpy as np
-from nose.tools import assert_true
 from .event import Discrete
 from .viz import plot_epochs
+from .utils import string_types
 
 
 class Epochs(object):
@@ -40,12 +40,16 @@ class Epochs(object):
         event_keys = None
         if isinstance(event_id, dict):
             my_event_id = event_id.values()
-            event_keys = {v: k for k, v in event_id.items()}
+            event_keys = dict()
+            for k, v in event_id.items():
+                event_keys[v] = k
         elif np.isscalar(event_id):
             my_event_id = [event_id]
 
         discrete_inds = [[] for _ in range(3)]
-        sample_inds = {k: [] for k in my_event_id}
+        sample_inds = dict()
+        for k in my_event_id:
+            sample_inds[k] = list()
         saccade_inds, fixation_inds, blink_inds = discrete_inds
         keep_idx = []
         min_samples = []
@@ -65,8 +69,8 @@ class Epochs(object):
             sample_inds[this_id].append([inds, ii])
             for kind, parsed in zip(raw.info['event_types'], discrete_inds):
                 df = raw.discrete.get(kind, kind)
-                assert_true(set([a <= b for a, b in
-                                df[['stime', 'etime']].values]) == set([True]))
+                assert(set([a <= b for a, b in
+                       df[['stime', 'etime']].values]) == set([True]))
                 event_in_window = np.where((df['stime'] >= this_tmin) &
                                            (df['etime'] <= this_tmax))
                 parsed.append([event_in_window[0], ii, this_id, this_time])
@@ -97,7 +101,7 @@ class Epochs(object):
         _samples = []
         c = np.concatenate
         track_inds = []
-        for this_id, values in sample_inds.iteritems():
+        for this_id, values in sample_inds.items():
             ind, _ = zip(*values)
             ind = [i[:min_samples] for i in ind]
             df = raw.samples.ix[c(ind)]
@@ -148,6 +152,9 @@ class Epochs(object):
         else:
             return epoch, self.events[self._current - 1][-1]
 
+    def __next__(self, *args, **kwargs):
+        return self.next(*args, **kwargs)
+
     @property
     def data(self):
         out = self._data[self.info['data_cols']].values
@@ -166,13 +173,13 @@ class Epochs(object):
 
     def __getitem__(self, idx):
         out = self.copy()
-        if isinstance(idx, basestring):
+        if isinstance(idx, string_types):
             if idx not in self.event_id:
                 raise ValueError('ID not found')
             idx = self.event_id[idx]
             idx = np.where(self.events[:, -1] == idx)[0]
         elif (isinstance(idx, list) and isinstance(idx[0],
-              basestring)):
+              string_types)):
             idx_list = []
             for ii in idx:
                 ii = self.event_id[ii]

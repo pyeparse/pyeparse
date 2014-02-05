@@ -5,17 +5,20 @@
 import numpy as np
 import pandas as pd
 from datetime import datetime
-from cStringIO import StringIO
+try:
+    from cStringIO import StringIO as sio
+except ImportError:  # py3 has renamed this
+    from io import StringIO as sio
 
 from .constants import EDF
 from .event import find_events
-from .utils import check_line_index, safe_bool
+from .utils import check_line_index, safe_bool, next
 from .viz import plot_calibration, plot_heatmap_raw
 
 
 def _assemble_data(lines, columns, sep='[ \t]+', na_values=['.']):
     """Aux function"""
-    return pd.read_table(StringIO(''.join(lines)), names=columns, sep=sep,
+    return pd.read_table(sio(''.join(lines)), names=columns, sep=sep,
                          na_values=na_values)
 
 
@@ -116,7 +119,7 @@ def _parse_calibration(info, calib_lines):
             this_validation = []
             while n_points != 0:
                 n_points -= 1
-                subline = lines.next().split()
+                subline = next(lines).split()
                 xy = subline[-6].split(',')
                 xy_diff = subline[-2].split(',')
                 this_validation.append({'point-x': xy[0],
@@ -130,7 +133,7 @@ def _parse_calibration(info, calib_lines):
             # additional lines on our way to the
             # empty line block tail
             while True:
-                this_line = lines.next()
+                this_line = next(lines)
                 if not this_line.strip('\n') or 'MSG' in line:
                     break
                 additional_lines.append(this_line)
@@ -263,7 +266,7 @@ class Raw(object):
                                 messages = [list() for _ in range(8)]
                         calib_lines = []
                         while True:
-                            subline = fid.next()
+                            subline = next(fid)
                             if subline.startswith('START'):
                                 break
                             calib_lines.append(subline)
@@ -362,9 +365,13 @@ class Raw(object):
             self.samples = samples_runs[0]
             self.discrete = discrete_runs[0]
         else:
-            one_run = reduce(_merge_run_data,  zip(*[samples_runs,
-                                                     discrete_runs,
-                                                     info_runs]))
+            one_run = None
+            # instead of using "reduce"
+            for run in zip(samples_runs, discrete_runs, info_runs):
+                if one_run is None:
+                    one_run = run
+                else:
+                    one_run = _merge_run_data(one_run, run)
             self.samples, self.discrete, self.info = one_run
         self.info['fname'] = fname
 

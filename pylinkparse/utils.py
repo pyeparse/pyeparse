@@ -7,6 +7,20 @@ import pandas as pd
 import numpy as np
 
 
+# For python3
+try:
+    advance_iterator = next
+except NameError:
+    def advance_iterator(it):
+        return it.next()
+next = advance_iterator
+
+try:
+    string_types = basestring  # noqa
+except NameError:
+    string_types = str
+
+
 def safe_bool(obj):
     """ Map arbitrary objecty state to bool singletons
     Parameters
@@ -42,7 +56,7 @@ def create_chunks(sequence, size):
     size : int
         The chunksize to be returned
     """
-    return (sequence[p:p + size] for p in xrange(0, len(sequence), size))
+    return (sequence[p:p + size] for p in range(0, len(sequence), size))
 
 
 def check_pandas_version(min_version):

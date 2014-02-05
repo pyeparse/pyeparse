@@ -3,7 +3,7 @@
 # License: BSD (3-clause)
 
 import numpy as np
-from .utils import safe_bool
+from .utils import safe_bool, string_types
 
 
 class Discrete(list):
@@ -40,7 +40,7 @@ def find_events(raw, pattern, event_id):
     if safe_bool(df):
         if callable(pattern):
             func = pattern
-        elif isinstance(pattern, basestring):
+        elif isinstance(pattern, string_types):
             func = lambda x: pattern in x
         else:
             raise ValueError('Pattern not valid. Pass string or function')

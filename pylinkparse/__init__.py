@@ -2,11 +2,11 @@
 #
 # License: BSD (3-clause)
 
-from raw import Raw
-from epochs import Epochs
-from event import find_custom_events
-import constants
-import viz
+from .raw import Raw  # noqa
+from .epochs import Epochs  # noqa
+from .event import find_custom_events  # noqa
+from . import constants  # noqa
+from . import viz  # noqa
 
 
 __version__ = 0.01

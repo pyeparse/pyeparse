@@ -1,0 +1,6 @@
+[run]
+branch = True
+source = pylinkparse
+include = *pylinkparse/*
+omit =
+    *setup.py

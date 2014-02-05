@@ -6,7 +6,7 @@ import numpy as np
 import math
 from collections import deque
 from functools import partial
-from .utils import create_chunks, safe_bool, fwhm_kernel_2d
+from .utils import create_chunks, safe_bool, fwhm_kernel_2d, string_types
 
 
 def plot_calibration(raw, title='Calibration', show=True):
@@ -319,7 +319,7 @@ def _epochs_axes_onclick(event, params):
 
 def _set_title(ax, title_str, ii):
     """Handle titles"""
-    if isinstance(title_str, basestring):
+    if isinstance(title_str, string_types):
         title = title_str % ii
     elif title_str is None:
         title = '#%00i' % ii
@@ -384,7 +384,7 @@ def plot_epochs(epochs, epoch_idx=None, picks=None, n_chunks=20,
         ch_names = [ch for ch in epochs.ch_names if ch in
                     epochs.info['data_cols']]
         picks = [ch_names.index(k) for k in picks]
-    elif any(p not in epochs.ch_names and isinstance(p, basestring)
+    elif any(p not in epochs.ch_names and isinstance(p, string_types)
              for p in picks):
         wrong = [p for p in picks if p not in epochs.ch_names]
         raise ValueError('Some channels are not difened: ' + '; '.join(wrong))
@@ -408,9 +408,11 @@ def plot_epochs(epochs, epoch_idx=None, picks=None, n_chunks=20,
     fig, axes = _prepare_trellis(len(this_idx), max_col=5)
     axes_handler = deque(range(len(idx_handler)))
     data = np.ma.masked_invalid(epochs.data[this_idx][:, picks])
-    if isinstance(draw_discrete, basestring):
-        key = {k.strip('_'): k for k in
-               epochs.info['discretes']}[draw_discrete]
+    if isinstance(draw_discrete, string_types):
+        key = dict()
+        for k in epochs.info['discretes']:
+            key[k.strip('_')] = k
+        key = key[draw_discrete]
         discretes = [d['stime'].values * 1e3 for d in vars(epochs)[key]
                      if safe_bool(d)]
     elif draw_discrete is None:

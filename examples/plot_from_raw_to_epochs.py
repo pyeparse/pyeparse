@@ -28,7 +28,7 @@ epochs.data_frame.ix[3, ['xpos', 'ypos']].plot()
 
 # iterate over and access numpy arrays.
 # find epochs withouth loss of tracking / blinks
-print len([e for e in epochs if not np.isnan(e).any()])
+print(len([e for e in epochs if not np.isnan(e).any()]))
 
 pl.figure()
 pl.title('Superimposed saccade responses')

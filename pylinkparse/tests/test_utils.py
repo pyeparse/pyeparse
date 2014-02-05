@@ -2,16 +2,17 @@
 #
 # License: BSD (3-clause)
 
-from pylinkparse.utils import safe_bool
+import numpy as np
 import pandas as pd
 from nose.tools import assert_true
-import numpy as np
+
+from pylinkparse.utils import safe_bool
 
 
 def test_safe_bool():
     """ Test safe bool wrapper
     """
-    df = pd.DataFrame({'a': range(10)})
+    df = pd.DataFrame({'a': np.arange(10)})
     f = safe_bool
     assert_true(f(df) is True)
     df.pop('a')
