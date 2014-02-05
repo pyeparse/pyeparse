@@ -40,16 +40,12 @@ class Epochs(object):
         event_keys = None
         if isinstance(event_id, dict):
             my_event_id = event_id.values()
-            event_keys = dict()
-            for k, v in event_id.items():
-                event_keys[v] = k
+            event_keys = dict((v, k) for k, v in event_id.items())
         elif np.isscalar(event_id):
             my_event_id = [event_id]
 
         discrete_inds = [[] for _ in range(3)]
-        sample_inds = dict()
-        for k in my_event_id:
-            sample_inds[k] = list()
+        sample_inds = dict((k, []) for k in my_event_id)
         saccade_inds, fixation_inds, blink_inds = discrete_inds
         keep_idx = []
         min_samples = []
