@@ -17,6 +17,7 @@ def test_epochs_io():
     events = np.array([[12000, 77], [1000, 999], [10000, 999]])
     for fname in fnames:
         raw = Raw(fname)
+        epochs = Epochs([raw] * 3, [events] * 3, event_id, tmin, tmax)
         epochs = Epochs(raw, events, event_id, tmin, tmax)
         print(epochs)  # test repr works
         for disc in epochs.info['discretes']:

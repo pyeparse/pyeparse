@@ -54,28 +54,36 @@ class Epochs(object):
         assert len(raw) > 0
         # figure out parameters to use
         idx_offsets = raw[0].time_as_index([self.tmin, self.tmax])
+        n_samples = idx_offsets[1] - idx_offsets[0]
+        self._n_times = n_samples
+        self.times = np.linspace(self.tmin, self.tmax, self._n_times)
         self.info = dict(sfreq=raw[0].info['sfreq'],
                          data_cols=raw[0].info['data_cols'])
         for r in raw[1:]:
             if r.info['sfreq'] != raw[0].info['sfreq']:
                 raise RuntimeError('incompatible raw files')
-        n_samples = idx_offsets[1] - idx_offsets[0]
-        self._n_times = n_samples
-        self.times = np.linspace(self.tmin, self.tmax, self._n_times)
         # process each raw file
         outs = list()
+        
         for rr, ee in zip(raw, events):
-            out = self._process_raw_events(rr, ee, my_event_id,
-                                           event_keys, idx_offsets)
+            out = self._process_raw_events(rr, ee, my_event_id, event_keys, idx_offsets)
             outs.append(out)
             
         _samples, _discretes, _events = zip(*outs)
         _events = np.concatenate(_events)
-    
-        # import pdb;pdb.set_trace()
         self._n_epochs = len(_events)
         # ignore index to allow for sorting + keep unique values
-        _data = pd.concat(_samples[0], ignore_index=True)
+
+        _flatten = lambda x: [i for i in x for i in i]
+        _samples = _flatten(_samples)
+        if len(raw) > 1:  # update sample counts for index
+            this_n_epochs = 0 
+            for ss in _samples:
+                if this_n_epochs:
+                    ss['epoch_idx'] += this_n_epochs
+                this_n_epochs += len(ss.epoch_idx.unique()) 
+           
+        _data = pd.concat(_samples, ignore_index=True)
         # important for multiple conditions
         _data = _data.sort(['epoch_idx', 'time'])
         self._data = _data
@@ -83,7 +91,7 @@ class Epochs(object):
         self._data.set_index(['epoch_idx', 'times'], drop=True,
                              inplace=True, verify_integrity=True)
         assert self._n_epochs == self._data.index.values.max()[0] + 1
-        self.info['discretes'] = _discretes[0]
+        self.info['discretes'] = _flatten(_discretes)
         self.events = _events
 
     def _process_raw_events(self, raw, events, my_event_id, event_keys,
