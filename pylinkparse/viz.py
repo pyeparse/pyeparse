@@ -180,9 +180,9 @@ def figure_nobar(*args, **kwargs):
     try:
         pl.mpl.rcParams['toolbar'] = 'none'
         fig = pl.figure(*args, **kwargs)
-        pl.draw()  # make sure all callbacks are set before iterating
         # remove button press catchers (for toolbar)
-        for key in fig.canvas.callbacks.callbacks['key_press_event'].keys():
+        keys = list(fig.canvas.callbacks.callbacks['key_press_event'].keys())
+        for key in keys:
             fig.canvas.callbacks.disconnect(key)
     except Exception as ex:
         raise ex

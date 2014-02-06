@@ -87,8 +87,8 @@ class Epochs(object):
                         df = this_in.ix[inds]
                         df['event_id'] = this_id
                         # don't use -= here b/c pandas complains
-                        df['stime'] = df['stime'] - this_time
-                        df['etime'] = df['etime'] - this_time
+                        df['stime'] -= this_time
+                        df['etime'] -= this_time
                         this_discrete.append(df)
                     else:
                         this_discrete.append([])
