@@ -28,6 +28,8 @@ def plot_calibration(raw, title='Calibration', show=True):
     """
     import pylab as pl
     figs = []
+    if 'calibration' not in raw.info:
+        raise RuntimeError('No calibration found in raw')
     for cal in raw.info['calibration']:
         fig = pl.figure()
         figs.append(fig)
@@ -139,11 +141,10 @@ def plot_heatmap_raw(raw, start=None, stop=None, cmap=None,
         The resulting figure object
     """
     import pylab as pl
-    k = 'screen_coords'
-    if k not in raw.info:
+    if 'screen_coords' not in raw.info:
         raise RuntimeError('Raw object does not include '
                            'screemncoordinates.')
-    width, height = raw.info[k]
+    width, height = raw.info['screen_coords']
     if isinstance(start, float):
         start = raw.time_as_index([start])
     if isinstance(stop, float):
