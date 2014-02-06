@@ -28,9 +28,9 @@ install:
     - if [ "${PYTHON}" != "2.7" ]; then
         conda create -n testenv --yes --quiet pip python=$PYTHON;
         source activate testenv;
-        conda install --yes --quiet scipy pandas nose;
+        conda install --yes --quiet scipy pandas nose matplotlib;
       else
-        travis_retry sudo apt-get -qq install python-scipy python-pandas python-nose;
+        travis_retry sudo apt-get -qq install python-scipy python-pandas python-nose python-matplotlib;
       fi;
     - pip install -q coveralls nose-timer flake8
     - python setup.py build
