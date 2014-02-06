@@ -15,10 +15,12 @@ class Epochs(object):
 
     Parameters
     ----------
-    raw : instance of pylabparse.raw.Raw
-        The raw instance to create epochs from
-    events : ndarray (n_epochs)
-        The events to construct epochs around.
+    raw : instance of Raw | list
+        The raw instance to create epochs from. Can also be a list of raw
+        instances to use.
+    events : ndarray (n_epochs) | list
+        The events to construct epochs around. Can also be a list of
+        arrays.
     event_id : int | dict
         The event ID to use. Can be a dict to supply multiple event types
         by name.
@@ -33,35 +35,78 @@ class Epochs(object):
         The epoched dataset.
     """
     def __init__(self, raw, events, event_id, tmin, tmax):
-        self.info = copy.deepcopy(raw.info)
         self.event_id = event_id
         self.tmin = tmin
         self.tmax = tmax
-        data, times = raw[:]
+        self._current = 0
         event_keys = None
         if isinstance(event_id, dict):
             my_event_id = event_id.values()
             event_keys = dict((v, k) for k, v in event_id.items())
         elif np.isscalar(event_id):
             my_event_id = [event_id]
+        if not isinstance(raw, list):
+            raw = [raw]
+        if not isinstance(events, list):
+            events = [events]
+        if len(raw) != len(events):
+            raise ValueError('raw and events must match')
+        assert len(raw) > 0
+        # figure out parameters to use
+        idx_offsets = raw[0].time_as_index([self.tmin, self.tmax])
+        self.info = dict(sfreq=raw[0].info['sfreq'],
+                         data_cols=raw[0].info['data_cols'])
+        for r in raw[1:]:
+            if r.info['sfreq'] != raw[0].info['sfreq']:
+                raise RuntimeError('incompatible raw files')
+        n_samples = idx_offsets[1] - idx_offsets[0]
+        self._n_times = n_samples
+        self.times = np.linspace(self.tmin, self.tmax, self._n_times)
+        # process each raw file
+        outs = list()
+        for rr, ee in zip(raw, events):
+            out = self._process_raw_events(rr, ee, my_event_id,
+                                           event_keys, idx_offsets)
+            outs.append(out)
+        _samples = outs[0][0]
+        _discretes = outs[0][2]
+        _events = np.concatenate([out[3] for out in outs])
+        for out in outs[1:]:
+            _samples.extend(out[0])
+            _discretes.extend(out[2])  # XXX NEED TO ADJUST TIME INDICES?
+        self._n_epochs = len(_events)
+        # ignore index to allow for sorting + keep unique values
+        _data = pd.concat(_samples, ignore_index=True)
+        # important for multiple conditions
+        _data = _data.sort(['epoch_idx', 'time'])
+        self._data = _data
+        self._data['times'] = np.tile(self.times, self._n_epochs)
+        self._data.set_index(['epoch_idx', 'times'], drop=True,
+                             inplace=True, verify_integrity=True)
+        assert self._n_epochs == self._data.index.values.max()[0]
+        self.info['discretes'] = _discretes
+        self.events = _events
 
+    def _process_raw_events(self, raw, events, my_event_id, event_keys,
+                            idx_offsets):
+        data, times = raw[:]
         discrete_inds = [[] for _ in range(3)]
         sample_inds = dict((k, []) for k in my_event_id)
         saccade_inds, fixation_inds, blink_inds = discrete_inds
         keep_idx = []
-        min_samples = []
         # prevent the evil
         events = events[events[:, 0].argsort()]
         for ii, (event, this_id) in enumerate(events):
             if this_id not in my_event_id:
                 continue
             this_time = times[event]
-            this_tmin, this_tmax = this_time + tmin, this_time + tmax
-            inds_min, inds_max = raw.time_as_index([this_tmin, this_tmax])
+            this_tmin, this_tmax = this_time + self.tmin, this_time + self.tmax
+            inds_min, inds_max = raw.time_as_index(this_time)[0] + idx_offsets
             if max([inds_min, inds_max]) >= len(raw.samples):
                 continue
+            if min([inds_min, inds_max]) < 0:
+                continue
             inds = np.arange(inds_min, inds_max)
-            min_samples.append(inds.shape[0])
 
             sample_inds[this_id].append([inds, ii])
             for kind, parsed in zip(raw.info['event_types'], discrete_inds):
@@ -72,9 +117,9 @@ class Epochs(object):
                                            (df['etime'] <= this_tmax))
                 parsed.append([event_in_window[0], ii, this_id, this_time])
             keep_idx.append(ii)
-        self.events = events[keep_idx]
-        min_samples = np.min(min_samples)
+        events = events[keep_idx]
 
+        discretes = []
         for kind, parsed in zip(['saccades', 'fixations', 'blinks'],
                                 discrete_inds):
             this_in = raw.discrete.get(kind, None)
@@ -93,39 +138,25 @@ class Epochs(object):
                     else:
                         this_discrete.append([])
                 this_name = kind + '_'
-                setattr(self, this_name, this_discrete)
-                self.info['discretes'] += [this_name]
+                setattr(self, this_name, this_discrete)  # XXX FIX
+                discretes += [this_name]
 
         _samples = []
         c = np.concatenate
         track_inds = []
         for this_id, values in sample_inds.items():
             ind, _ = zip(*values)
-            ind = [i[:min_samples] for i in ind]
+            ind = [i[:self._n_times] for i in ind]
             df = raw.samples.ix[c(ind)]
             this_id = this_id if event_keys is None else event_keys[this_id]
             df['event_id'] = this_id
-            count = c([np.repeat(vv, min_samples) for _, vv in values])
+            count = c([np.repeat(vv, self._n_times) for _, vv in values])
             df['epoch_idx'] = count
             _samples.append(df)
             track_inds.extend([len(i) for i in ind])
 
-        # important for multiple conditions
-        sort_k = ['epoch_idx', 'time']
-        # ignore index to allow for sorting + keep unique values
-        self._data = pd.concat(_samples, ignore_index=True)
-        self._data = self._data.sort(sort_k)
-        assert set(track_inds) == set([min_samples])
-        n_samples = min_samples
-        n_epochs = len(track_inds)
-        self.times = np.linspace(tmin, tmax, n_samples)
-        self._data['times'] = np.tile(self.times, n_epochs)
-        self._n_times = min_samples
-        self._n_epochs = n_epochs
-
-        self._data.set_index(['epoch_idx', 'times'], drop=True,
-                             inplace=True, verify_integrity=True)
-        self._current = 0
+        assert set(track_inds) == set([self._n_times])
+        return _samples, discretes, events
 
     def __repr__(self):
         s = '<Epochs | {0} events | tmin: {1} tmax: {2}>'
@@ -160,6 +191,10 @@ class Epochs(object):
                           len(self.times),
                           len(self.info['data_cols']))
         return np.transpose(out, [0, 2, 1])
+
+    @property
+    def len(self):
+        return self._n_epochs
 
     @property
     def data_frame(self):
