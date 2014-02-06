@@ -4,7 +4,7 @@ from os import path as op
 
 from pylinkparse import Raw, Epochs
 
-path = op.join(op.split(__file__)[0], 'data')
+path = op.join(op.dirname(__file__), 'data')
 fnames = [op.join(path, 'test_raw.asc'),
           op.join(path, 'test_2_raw.asc')]
 
