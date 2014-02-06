@@ -1,4 +1,5 @@
 import numpy as np
+from numpy.testing import assert_allclose
 from os import path as op
 from nose.tools import assert_true, assert_equal
 
@@ -40,9 +41,11 @@ def test_raw_io():
                 # relax, depends on data
                 assert_true(raw.discrete[kind]['stime'][0] < 5.0)
         assert_true(raw.samples['time'][0] < 1.0)
+        for interp in [None, 'zoh', 'linear']:
+            raw.remove_blink_artifacts(interp)
 
 
-def tets_access_data():
+def test_access_data():
     """Test raw slicing and indexing"""
     for fname in fnames:
         raw = Raw(fname)
@@ -51,6 +54,6 @@ def tets_access_data():
             assert_equal(len(data), len(times))
 
         # test for monotonous continuity
-        deltas = np.unique(np.diff(times))
-        assert_equal(len(deltas), 1)
-        assert_equal(deltas[0], 1.0)
+        deltas = np.diff(times)
+        assert_allclose(deltas, deltas[0] * np.ones_like(deltas))
+        assert_allclose(deltas[0], 0.001)

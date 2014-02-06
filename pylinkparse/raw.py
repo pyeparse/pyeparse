@@ -381,7 +381,11 @@ class Raw(object):
     def __getitem__(self, idx):
         df = self.samples
         data = df[self.info['data_cols']].values[idx]
-        return data, df['time'].values[idx]
+        return np.atleast_2d(data), np.atleast_1d(df['time'].values[idx])
+
+    @property
+    def n_samples(self):
+        return len(self.samples)
 
     def plot_calibration(self, title='Calibration', show=True):
         """Visualize calibration
@@ -460,3 +464,47 @@ class Raw(object):
             The indices found.
         """
         return find_events(raw=self, pattern=pattern, event_id=event_id)
+
+    def remove_blink_artifacts(self, interp='linear', border=0.01):
+        """Remove blink artifacts from gaze data
+
+        This function uses the timing of saccade events to clean up
+        pupil size data.
+
+        Parameters
+        ----------
+        interp : str | None
+            If string, can be 'linear' or 'zoh' (zeroth-order hold).
+            If None, no interpolation is done, and extra ``nan`` values
+            are inserted to help clean data. (The ``nan`` values inserted
+            by Eyelink itself typically do not span the entire blink
+            duration.)
+        border : float
+            Time on each side of the saccade event to use as a border
+            (in seconds). This will be additional time that is eliminated
+            as invalid and interpolated over (or turned into ``nan``).
+        """
+        if interp is not None and interp not in ['linear', 'zoh']:
+            raise ValueError('interp must be None, "linear", or "zoh", not '
+                             '"%s"' % interp)
+        starts = self.discrete['saccades']['stime'].values - border
+        ends = self.discrete['saccades']['etime'].values + border
+        idx = np.logical_and(starts > 0, ends < self.n_samples - 1)
+        starts = starts[idx]
+        ends = ends[idx]
+        # prevent collisions
+        goods = starts[1:] > ends[:-1]
+        starts = starts[np.concatenate([[True], goods])]
+        ends = ends[np.concatenate([goods, [True]])]
+        assert len(starts) == len(ends)
+        for stime, etime in zip(starts, ends):
+            sidx, eidx = self.time_as_index([stime, etime])
+            vals = self.samples['ps'][sidx:eidx].values
+            if interp is None:
+                fix = np.nan
+            elif interp == 'zoh':
+                fix = self.samples['ps'][sidx]
+            elif interp == 'linear':
+                len_ = eidx - sidx
+                fix = np.linspace(vals[0], vals[-1], len_)
+            self.samples['ps'][sidx:eidx] = fix
