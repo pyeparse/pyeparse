@@ -86,8 +86,9 @@ class Epochs(object):
                     if inds.any().any():
                         df = this_in.ix[inds]
                         df['event_id'] = this_id
-                        df['stime'] -= this_time
-                        df['etime'] -= this_time
+                        # don't use -= here b/c pandas complains
+                        df['stime'] = df['stime'] - this_time
+                        df['etime'] = df['etime'] - this_time
                         this_discrete.append(df)
                     else:
                         this_discrete.append([])
@@ -238,7 +239,6 @@ class Epochs(object):
         fig : Instance of matplotlib.figure.Figure
             The figure.
         """
-
         return plot_epochs(epochs=self, epoch_idx=epoch_idx, picks=picks,
                            n_chunks=n_chunks, title_str=title_str,
                            show=show, draw_discrete=draw_discrete,
