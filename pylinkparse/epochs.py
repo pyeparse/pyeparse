@@ -68,23 +68,22 @@ class Epochs(object):
             out = self._process_raw_events(rr, ee, my_event_id,
                                            event_keys, idx_offsets)
             outs.append(out)
-        _samples = outs[0][0]
-        _discretes = outs[0][2]
-        _events = np.concatenate([out[3] for out in outs])
-        for out in outs[1:]:
-            _samples.extend(out[0])
-            _discretes.extend(out[2])  # XXX NEED TO ADJUST TIME INDICES?
+            
+        _samples, _discretes, _events = zip(*outs)
+        _events = np.concatenate(_events)
+    
+        # import pdb;pdb.set_trace()
         self._n_epochs = len(_events)
         # ignore index to allow for sorting + keep unique values
-        _data = pd.concat(_samples, ignore_index=True)
+        _data = pd.concat(_samples[0], ignore_index=True)
         # important for multiple conditions
         _data = _data.sort(['epoch_idx', 'time'])
         self._data = _data
         self._data['times'] = np.tile(self.times, self._n_epochs)
         self._data.set_index(['epoch_idx', 'times'], drop=True,
                              inplace=True, verify_integrity=True)
-        assert self._n_epochs == self._data.index.values.max()[0]
-        self.info['discretes'] = _discretes
+        assert self._n_epochs == self._data.index.values.max()[0] + 1
+        self.info['discretes'] = _discretes[0]
         self.events = _events
 
     def _process_raw_events(self, raw, events, my_event_id, event_keys,
