@@ -19,8 +19,9 @@ class Epochs(object):
         The raw instance to create epochs from
     events : ndarray (n_epochs)
         The events to construct epochs around.
-    event_id : int
-        The event ID to use.
+    event_id : int | dict
+        The event ID to use. Can be a dict to supply multiple event types
+        by name.
     tmin : float
         The time window before a particular event in seconds.
     tmax : float

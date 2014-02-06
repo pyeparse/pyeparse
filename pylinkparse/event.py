@@ -2,6 +2,7 @@
 #
 # License: BSD (3-clause)
 
+import re
 import numpy as np
 from .utils import safe_bool, string_types
 
@@ -50,7 +51,8 @@ def find_events(raw, pattern, event_id):
         return np.c_[out, id_vector]
 
 
-def find_custom_events(raw, pattern, event_id, prefix=True, sep=' '):
+def find_custom_events(raw, pattern, event_id, prefix=True, sep='\W+',
+                       return_residuals=False):
     """Find arbitrary messages from raw data file
 
     Parameters
@@ -58,14 +60,17 @@ def find_custom_events(raw, pattern, event_id, prefix=True, sep=' '):
     raw : instance of pylinkparse.raw.Raw
         the raw file to find events in.
     pattern : str
-        A substring to be matched
+        A substring to be matched (using regular expressions).
     event_id : int
         The event id to use.
     prefix : bool
         Whether the message includes a prefix, e.g., MSG or
         directly begins with the time sample.
     sep : str
-        The separator.
+        The separator (will be regex matched to split the line).
+    return_residuals : bool
+        If True, then the rest of the event line will be returned for
+        each event.
 
     Returns
     -------
@@ -73,14 +78,28 @@ def find_custom_events(raw, pattern, event_id, prefix=True, sep=' '):
         The indices found.
     """
     events = []
+    residuals = []
 
     idx = 1 if prefix else 0
     with open(raw.info['fname']) as fid:
         for line in fid:
-            if pattern in line:
-                events.append(line.split(sep)[idx])
+            if len(re.findall(pattern, line)) > 0:
+                event = re.split(sep, line)
+                residuals.append(event[idx+1:])
+                event = event[idx]
+                try:
+                    event = float(event)
+                except ValueError:
+                    raise ValueError('could not convert to float: "%s", '
+                                     'perhaps separator is incorrect?'
+                                     % event)
+                events.append(event)
     events = np.array(events, dtype='f8')
     events -= raw._t_zero
     events /= 1e3
     out = raw.time_as_index(events)
-    return np.c_[out, np.repeat(event_id, len(out))].astype(np.int64)
+    out = np.c_[out, np.repeat(event_id, len(out))].astype(np.int64)
+    if return_residuals:
+        return out, residuals
+    else:
+        return out
