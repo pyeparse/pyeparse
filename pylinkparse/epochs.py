@@ -41,8 +41,12 @@ class Epochs(object):
         self._current = 0
         event_keys = None
         if isinstance(event_id, dict):
+            event_keys = dict()
             my_event_id = event_id.values()
-            event_keys = dict((v, k) for k, v in event_id.items())
+            for k, v in event_id.items():
+                if v not in events[: 2]:
+                    raise ValueError('Did not find event id %i' % v)
+                event_keys[v] = k
         elif np.isscalar(event_id):
             my_event_id = [event_id]
         if not isinstance(raw, list):
@@ -69,7 +73,6 @@ class Epochs(object):
             out = self._process_raw_events(rr, ee, my_event_id,
                                            event_keys, idx_offsets)
             outs.append(out)
-
         _samples, _discretes, _events = zip(*outs)
         _events = np.concatenate(_events)
         self._n_epochs = len(_events)
