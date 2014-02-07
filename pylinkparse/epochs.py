@@ -64,12 +64,12 @@ class Epochs(object):
                 raise RuntimeError('incompatible raw files')
         # process each raw file
         outs = list()
-        
+
         for rr, ee in zip(raw, events):
-            out = self._process_raw_events(rr, ee, my_event_id, 
+            out = self._process_raw_events(rr, ee, my_event_id,
                                            event_keys, idx_offsets)
             outs.append(out)
-            
+
         _samples, _discretes, _events = zip(*outs)
         _events = np.concatenate(_events)
         self._n_epochs = len(_events)
@@ -78,12 +78,12 @@ class Epochs(object):
         _flatten = lambda x: [i for i in x for i in i]
         _samples = _flatten(_samples)
         if len(raw) > 1:  # update sample counts for index
-            this_n_epochs = 0 
+            this_n_epochs = 0
             for ss in _samples:
                 if this_n_epochs:
                     ss['epoch_idx'] += this_n_epochs
-                this_n_epochs += len(ss.epoch_idx.unique()) 
-           
+                this_n_epochs += len(ss.epoch_idx.unique())
+
         _data = pd.concat(_samples, ignore_index=True)
         # important for multiple conditions
         _data = _data.sort(['epoch_idx', 'time'])
