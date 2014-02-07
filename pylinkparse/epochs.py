@@ -66,7 +66,8 @@ class Epochs(object):
         outs = list()
         
         for rr, ee in zip(raw, events):
-            out = self._process_raw_events(rr, ee, my_event_id, event_keys, idx_offsets)
+            out = self._process_raw_events(rr, ee, my_event_id, 
+                                           event_keys, idx_offsets)
             outs.append(out)
             
         _samples, _discretes, _events = zip(*outs)
