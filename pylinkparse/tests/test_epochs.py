@@ -13,7 +13,7 @@ fnames = glob.glob(op.join(op.split(__file__)[0], 'data', '*raw.asc'))
 def test_epochs_concat():
     """Test epochs concatenation"""
 
-    tmin, tmax = -0.5, 1.5
+    tmin, tmax = -0.05, 0.05
     event_dict = dict(foo=999, bar=77)
     events_a = np.array([[12000, 77], [1000, 999]])
     events_b = np.array([[1000, 999], [10000, 999]])
