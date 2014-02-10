@@ -2,16 +2,18 @@ import numpy as np
 from nose.tools import assert_raises
 from functools import partial
 from os import path as op
+import warnings
+import matplotlib
 
 from pylinkparse import Raw, Epochs
 from pylinkparse.viz import _epochs_axes_onclick, _epochs_navigation_onclick
 
+warnings.simplefilter('always')  # in case we hit warnings
+matplotlib.use('Agg')  # for testing don't use X server
+
 path = op.join(op.dirname(__file__), 'data')
 fnames = [op.join(path, 'test_raw.asc'),
           op.join(path, 'test_2_raw.asc')]
-
-import matplotlib
-matplotlib.use('Agg')  # for testing don't use X server
 
 
 class DummyEvent(object):

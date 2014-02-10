@@ -7,6 +7,8 @@ import glob
 
 from pylinkparse import Raw, Epochs
 
+warnings.simplefilter('always')  # in case we hit warnings
+
 fnames = glob.glob(op.join(op.split(__file__)[0], 'data', '*raw.asc'))
 
 

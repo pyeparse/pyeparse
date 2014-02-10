@@ -1,10 +1,13 @@
 import numpy as np
 import pandas as pd
+import warnings
 from nose.tools import assert_true
 from numpy.testing import assert_equal
+
 from pylinkparse import Raw
 from pylinkparse.event import find_custom_events, Discrete
 
+warnings.simplefilter('always')  # in case we hit warnings
 
 path = 'pylinkparse/tests/data/'
 fname = path + 'test_raw.asc'

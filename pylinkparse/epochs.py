@@ -156,7 +156,6 @@ class Epochs(object):
                     if inds.any().any():
                         df = this_in.ix[inds]
                         df['event_id'] = this_id
-                        # don't use -= here b/c pandas complains
                         df.loc[:, 'stime'] -= this_time
                         df.loc[:, 'etime'] -= this_time
                         this_discrete.append(df)
