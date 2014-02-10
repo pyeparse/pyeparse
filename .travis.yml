@@ -30,7 +30,8 @@ install:
         source activate testenv;
         conda install --yes --quiet scipy pandas nose matplotlib;
       else
-        travis_retry sudo apt-get -qq install python-scipy python-nose python-pandas python-matplotlib;
+        travis_retry sudo apt-get -qq install python-scipy python-nose python-matplotlib;
+        pip install pandas;
       fi;
     - pip install -q coveralls nose-timer flake8
     - python setup.py build
