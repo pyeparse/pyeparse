@@ -29,13 +29,16 @@ class Epochs(object):
         The time window before a particular event in seconds.
     tmax : float
         The time window after a particular event in seconds.
+    ignore_missing : bool
+        If True, do not warn if no events were found.
 
     Returns
     -------
     epochs : instance of Epochs
         The epoched dataset.
     """
-    def __init__(self, raw, events, event_id, tmin, tmax):
+    def __init__(self, raw, events, event_id, tmin, tmax,
+                 ignore_missing=False):
         self.event_id = event_id
         self.tmin = tmin
         self.tmax = tmax
@@ -51,7 +54,8 @@ class Epochs(object):
             event_keys = dict()
             my_event_id = event_id.values()
             for k, v in event_id.items():
-                if v not in np.concatenate(events)[:, 1]:
+                if v not in np.concatenate(events)[:, 1] and \
+                        not ignore_missing:
                     warnings.warn('Did not find event id %i' % v,
                                   RuntimeWarning)
                 event_keys[v] = k
@@ -166,12 +170,18 @@ class Epochs(object):
         c = np.concatenate
         track_inds = []
         for this_id, values in sample_inds.items():
-            ind, _ = zip(*values)
-            ind = [i[:self._n_times] for i in ind]
-            df = raw.samples.ix[c(ind)]
+            if len(values) > 0:
+                ind, _ = zip(*values)
+                ind = [i[:self._n_times] for i in ind]
+                cind = c(ind)
+                count = c([np.repeat(vv, self._n_times) for _, vv in values])
+            else:
+                ind = list()
+                cind = np.array([], dtype=int)
+                count = list()
+            df = raw.samples.ix[cind]
             this_id = this_id if event_keys is None else event_keys[this_id]
             df['event_id'] = this_id
-            count = c([np.repeat(vv, self._n_times) for _, vv in values])
             df['epoch_idx'] = count
             _samples.append(df)
             track_inds.extend([len(i) for i in ind])

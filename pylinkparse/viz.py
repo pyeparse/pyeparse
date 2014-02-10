@@ -127,9 +127,9 @@ def plot_heatmap_raw(raw, start=None, stop=None, cmap=None,
     raw : instance of pylinkparse raw
         The raw object to be visualized
     start : float | None
-        The canvas width.
+        Start time in seconds.
     stop : float | None
-        The canvas height.
+        End time in seconds.
     title : str
         The title to be displayed.
     show : bool
@@ -389,7 +389,7 @@ def plot_epochs(epochs, epoch_idx=None, picks=None, n_chunks=20,
     elif any(p not in epochs.ch_names and isinstance(p, string_types)
              for p in picks):
         wrong = [p for p in picks if p not in epochs.ch_names]
-        raise ValueError('Some channels are not difened: ' + '; '.join(wrong))
+        raise ValueError('Some channels are not defined: ' + '; '.join(wrong))
     if len(picks) < 1:
         raise RuntimeError('No appropriate channels found. Please'
                            ' check your picks')
@@ -488,7 +488,7 @@ def plot_epochs(epochs, epoch_idx=None, picks=None, n_chunks=20,
         'reject_idx': [],
         'axes_handler': axes_handler,
         'discretes': discretes,
-        'discrete_colors': discrete_colors
+        'discrete_colors': discrete_colors,
     }
     fig.canvas.mpl_connect('button_press_event',
                            partial(_epochs_axes_onclick, params=params))

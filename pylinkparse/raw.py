@@ -412,9 +412,9 @@ class Raw(object):
         Parameters
         ----------
         start : float | None
-            The canvas width.
+            Start time in seconds.
         stop : float | None
-            The canvas height.
+            End time in seconds.
         title : str
             The title to be displayed.
         show : bool

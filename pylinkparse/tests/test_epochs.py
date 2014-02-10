@@ -1,5 +1,6 @@
 import numpy as np
 from os import path as op
+import warnings
 from numpy.testing import assert_equal, assert_array_equal
 from nose.tools import assert_true
 import glob
@@ -9,17 +10,49 @@ from pylinkparse import Raw, Epochs
 fnames = glob.glob(op.join(op.split(__file__)[0], 'data', '*raw.asc'))
 
 
+def test_epochs_concat():
+    """Test epochs concatenation"""
+
+    tmin, tmax = -0.5, 1.5
+    event_dict = dict(foo=999, bar=77)
+    events_a = np.array([[12000, 77], [1000, 999]])
+    events_b = np.array([[1000, 999], [10000, 999]])
+    for fname in fnames:
+        raw = Raw(fname)
+        epochs_ab = Epochs([raw] * 2, [events_a, events_b], event_dict,
+                           tmin, tmax)
+        epochs_ba = Epochs([raw] * 2, [events_b, events_a], event_dict,
+                           tmin, tmax)
+        assert_equal(len(epochs_ab.events), 4)
+        assert_equal(len(epochs_ba.events), 4)
+        assert_array_equal(epochs_ab.times, epochs_ba.times)
+        # make sure event numbers match
+        reord = [2, 3, 0, 1]
+        assert_array_equal(epochs_ab.events[:, 1], epochs_ba.events[reord, 1])
+        # make sure actual data matches
+        data_ab = epochs_ab.data
+        data_ba = epochs_ba.data
+        assert_array_equal(data_ab, data_ba[reord])
+
+
 def test_epochs_io():
     """Test epochs IO functionality"""
 
     tmin, tmax, event_id = -0.5, 1.5, 999
-    event_dict = dict(foo=999, bar=77)
+    missing_event_dict = dict(foo=999, bar=555)
     # create some evil events
     events = np.array([[12000, 77], [1000, 999], [10000, 999]])
     for fname in fnames:
         raw = Raw(fname)
-        epochs = Epochs([raw] * 3, [events] * 3, event_id, tmin, tmax)
-        epochs = Epochs(raw, events, event_dict, tmin, tmax)
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter('always')
+            epochs = Epochs(raw, events, missing_event_dict, tmin, tmax,
+                            ignore_missing=True)
+        assert_equal(len(w), 0)
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter('always')
+            epochs = Epochs(raw, events, missing_event_dict, tmin, tmax)
+        assert_equal(len(w), 1)
         epochs = Epochs(raw, events, event_id, tmin, tmax)
         print(epochs)  # test repr works
         for disc in epochs.info['discretes']:
