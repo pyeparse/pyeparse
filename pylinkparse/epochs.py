@@ -6,7 +6,6 @@ import pandas as pd
 import copy
 import numpy as np
 import warnings
-from functools import reduce
 from .event import Discrete
 from .viz import plot_epochs
 from .utils import string_types
