@@ -146,9 +146,9 @@ def plot_heatmap_raw(raw, start=None, stop=None, cmap=None,
                            'screemncoordinates.')
     width, height = raw.info['screen_coords']
     if isinstance(start, float):
-        start = raw.time_as_index([start])
+        start = raw.time_as_index([start])[0]
     if isinstance(stop, float):
-        stop = raw.time_as_index([stop])
+        stop = raw.time_as_index([stop])[0]
     data, times = raw[start:stop]
     xdata, ydata = data[:, :2].T
     fig, _ = plot_heatmap(xdata=xdata, ydata=ydata, width=width,

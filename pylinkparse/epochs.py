@@ -145,7 +145,7 @@ class Epochs(object):
         events = events[keep_idx]
 
         discretes = []
-        for kind, parsed in zip(['saccades', 'fixations', 'blinks'],
+        for kind, parsed in zip(['saccades', 'fixations', 'blinkfds'],
                                 discrete_inds):
             this_in = raw.discrete.get(kind, None)
             if this_in is not None:

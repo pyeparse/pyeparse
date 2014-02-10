@@ -12,6 +12,10 @@ warnings.simplefilter('always')  # in case we hit warnings
 fnames = glob.glob(op.join(op.split(__file__)[0], 'data', '*raw.asc'))
 
 
+def _filter_warnings(w):
+    return [ww for ww in w if 'Did not find event' in str(ww)]
+
+
 def test_epochs_concat():
     """Test epochs concatenation"""
 
@@ -50,11 +54,11 @@ def test_epochs_io():
             warnings.simplefilter('always')
             epochs = Epochs(raw, events, missing_event_dict, tmin, tmax,
                             ignore_missing=True)
-        assert_equal(len(w), 0)
+        assert_equal(len(_filter_warnings(w)), 0)
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter('always')
             epochs = Epochs(raw, events, missing_event_dict, tmin, tmax)
-        assert_equal(len(w), 1)
+        assert_equal(len(_filter_warnings(w)), 1)
         epochs = Epochs(raw, events, event_id, tmin, tmax)
         print(epochs)  # test repr works
         for disc in epochs.info['discretes']:
