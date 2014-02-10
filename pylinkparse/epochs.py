@@ -47,13 +47,14 @@ class Epochs(object):
         if not isinstance(events, list):
             events = [events]
         if len(raw) != len(events):
-            raise ValueError('raw and events must match')        
+            raise ValueError('raw and events must match')
         if isinstance(event_id, dict):
             event_keys = dict()
             my_event_id = event_id.values()
             for k, v in event_id.items():
-                if v not in np.concatenate(events)[: 2]:
-                    warnings.warn('Did not find event id %i' % v, RuntimeWarning)
+                if v not in np.concatenate(events)[:, 1]:
+                    warnings.warn('Did not find event id %i' % v,
+                                  RuntimeWarning)
                 event_keys[v] = k
         elif np.isscalar(event_id):
             my_event_id = [event_id]
@@ -69,41 +70,43 @@ class Epochs(object):
         for r in raw[1:]:
             if r.info['sfreq'] != raw[0].info['sfreq']:
                 raise RuntimeError('incompatible raw files')
-        sfreq = r.info['sfreq']
         # process each raw file
-        outs = [self._process_raw_events(rr, ee, my_event_id, event_keys, idx_offsets) 
+        outs = [self._process_raw_events(rr, ee, my_event_id,
+                                         event_keys, idx_offsets)
                 for rr, ee in zip(raw, events)]
 
         _samples, _discretes, _events = zip(*outs)
-        
-        def _reduce_events(events1, events2):  # we should re-align events
-            events2[:, 0] += events1[-1, 0]
-            return np.concatenate([events2, events2], 0)
-
-        _events = reduce(_reduce_events, _events)
+        offset = np.cumsum(np.concatenate(([0], [r.n_samples for r in raw])))
+        for ev, off in zip(_events, offset[:-1]):
+            ev[:, 0] += off
+        _events = np.concatenate(_events)
         self._n_epochs = len(_events)
 
-        # flattening is important, otherwise concatenaiton fails,
+        # Need to add offsets to our epoch indices
+        offset = 0
+        for _samp in _samples:
+            use_offset = offset
+            for _s in _samp:
+                _s.epoch_idx += use_offset
+                offset += len(_s.epoch_idx.unique())
+
+        # flattening is important, otherwise concatenation fails,
         # the zip returns a somewhat nested structure ...
-        _flatten = lambda x: [i for i in x for i in i]
+        _flatten = lambda x: [ii for i in x for ii in i]
         _samples = _flatten(_samples)
-        if len(raw) > 1:  # update sample counts for index
-           for i in range(len(_samples)):  # this should in theory
-                if i + 1 > len(_samples):  # establish unique epoch counts
-                    break 
-                samp1, samp2 = _samples[i:i + 1]
-                samp2.epoch_idx += len(samp1.epoch_idx.unique())
+        _discretes = _flatten(_discretes)
 
         # ignore index to allow for sorting + keep unique values
         _data = pd.concat(_samples, ignore_index=True)
         # important for multiple conditions
         _data = _data.sort(['epoch_idx', 'time'])
         self._data = _data
+        assert len(_data) == self._n_epochs * len(self.times)
         self._data['times'] = np.tile(self.times, self._n_epochs)
         self._data.set_index(['epoch_idx', 'times'], drop=True,
                              inplace=True, verify_integrity=True)
         assert self._n_epochs == self._data.index.values.max()[0] + 1
-        self.info['discretes'] = _flatten(_discretes)
+        self.info['discretes'] = _discretes
         self.events = _events
 
     def _process_raw_events(self, raw, events, my_event_id, event_keys,
@@ -175,6 +178,8 @@ class Epochs(object):
             track_inds.extend([len(i) for i in ind])
 
         assert set(track_inds) == set([self._n_times])
+        n_keep = sum([len(s.epoch_idx.unique()) for s in _samples])
+        assert len(events) == n_keep
         return _samples, discretes, events
 
     def __repr__(self):
