@@ -2,7 +2,7 @@ import numpy as np
 from os import path as op
 import warnings
 from numpy.testing import assert_equal, assert_array_equal
-from nose.tools import assert_true
+from nose.tools import assert_true, assert_raises
 import glob
 
 from pylinkparse import Raw, Epochs
@@ -14,6 +14,32 @@ fnames = glob.glob(op.join(op.split(__file__)[0], 'data', '*raw.asc'))
 
 def _filter_warnings(w):
     return [ww for ww in w if 'Did not find event' in str(ww)]
+
+
+def test_epochs_combine():
+    """Test epochs combine IDs functionality"""
+
+    tmin, tmax = -0.5, 1.5
+    event_dict = dict(foo=1, bar=2, test=3)
+    events_1 = np.array([[12000, 1], [1000, 2], [10000, 2], [2000, 3]])
+    events_2 = np.array([[12000, 2], [1000, 1], [10000, 1], [2000, 3]])
+    for fname in fnames:
+        raw = Raw(fname)
+        epochs_1 = Epochs(raw, events_1, event_dict, tmin, tmax)
+        epochs_2 = Epochs(raw, events_2, event_dict, tmin, tmax)
+        assert_raises(ValueError, epochs_1.combine_event_ids, ['foo', 'bar'],
+                      dict(foobar=1))
+        epochs_1.combine_event_ids(['foo', 'bar'], 12)
+        epochs_2.combine_event_ids(['foo', 'bar'], dict(foobar=12))
+        d1 = epochs_1.data
+        d2 = epochs_2.data
+        assert_array_equal(d1, d2)
+
+        epochs_1.equalize_event_counts(['12', 'test'])
+        epochs_2.equalize_event_counts(['foobar', 'test'])
+        d1 = epochs_1.data
+        d2 = epochs_2.data
+        assert_array_equal(d1, d2)
 
 
 def test_epochs_concat():
