@@ -8,7 +8,7 @@ import numpy as np
 import warnings
 from .event import Discrete
 from .viz import plot_epochs
-from .utils import string_types
+from .utils import string_types, discrete_types
 
 
 class Epochs(object):
@@ -97,7 +97,6 @@ class Epochs(object):
         # the zip returns a somewhat nested structure ...
         _flatten = lambda x: [ii for i in x for ii in i]
         _samples = _flatten(_samples)
-        _discretes = _flatten(_discretes)
 
         # ignore index to allow for sorting + keep unique values
         _data = pd.concat(_samples, ignore_index=True)
@@ -109,7 +108,14 @@ class Epochs(object):
         self._data.set_index(['epoch_idx', 'times'], drop=True,
                              inplace=True, verify_integrity=True)
         assert self._n_epochs == self._data.index.values.max()[0] + 1
-        self.info['discretes'] = _discretes
+
+        # deal with discretes
+        for kind in discrete_types:
+            this_discrete = Discrete()
+            for d in _discretes:
+                this_discrete.extend(d[kind])
+            setattr(self, kind, this_discrete)
+        self.info['discretes'] = discrete_types
         self.events = _events
 
     def _process_raw_events(self, raw, events, my_event_id, event_keys,
@@ -144,12 +150,12 @@ class Epochs(object):
             keep_idx.append(ii)
         events = events[keep_idx]
 
-        discretes = []
-        for kind, parsed in zip(['saccades', 'fixations', 'blinkfds'],
-                                discrete_inds):
+        discretes = dict()
+        for kind, parsed in zip(discrete_types, discrete_inds):
             this_in = raw.discrete.get(kind, None)
+            this_discrete = Discrete()
+            discretes[kind] = this_discrete
             if this_in is not None:
-                this_discrete = Discrete()
                 for inds, epochs_idx, this_id, this_time in parsed:
                     this_id = (this_id if event_keys is None else
                                event_keys[this_id])
@@ -161,9 +167,6 @@ class Epochs(object):
                         this_discrete.append(df)
                     else:
                         this_discrete.append([])
-                this_name = kind + '_'
-                setattr(self, this_name, this_discrete)  # XXX FIX
-                discretes += [this_name]
 
         _samples = []
         c = np.concatenate

@@ -39,6 +39,15 @@ def test_epochs_concat():
         data_ab = epochs_ab.data
         data_ba = epochs_ba.data
         assert_array_equal(data_ab, data_ba[reord])
+        # test discretes
+        assert_equal(len(epochs_ab.blinks), len(epochs_ba.blinks))
+        blink_ab = epochs_ab.blinks[3]
+        blink_ba = epochs_ba.blinks[reord[3]]
+        assert_equal(len(blink_ab), len(blink_ba))
+        assert_true(len(blink_ab) > 0)  # make sure we've tested useful case
+        blink_ab_d = blink_ab.loc[:, ['stime', 'etime']].values
+        blink_ba_d = blink_ba.loc[:, ['stime', 'etime']].values
+        assert_array_equal(blink_ab_d, blink_ba_d)
 
 
 def test_epochs_io():
@@ -94,7 +103,7 @@ def test_epochs_io():
         assert_equal(set(epochs2.events[:, -1]), set([999]))
         desired = len(epochs2.events) * len(epochs.times)
         assert_equal(epochs2.data_frame.shape[0], desired)
-        assert_equal(len(epochs2.saccades_), len(epochs2.events))
+        assert_equal(len(epochs2.saccades), len(epochs2.events))
         assert_true(epochs2.data_frame['time'].diff().min() >= 0)
 
         epochs2 = epochs[[1, 0]]
@@ -102,21 +111,21 @@ def test_epochs_io():
         assert_equal(set(epochs2.events[:, -1]), set([999]))
         desired = len(epochs2.events) * len(epochs.times)
         assert_equal(epochs2.data_frame.shape[0], desired)
-        assert_equal(len(epochs2.saccades_), len(epochs2.events))
+        assert_equal(len(epochs2.saccades), len(epochs2.events))
 
         epochs2 = epochs['a']
         assert_equal(len(epochs2.events), 2)
         assert_equal(set(epochs2.events[:, -1]), set([999]))
         desired = len(epochs2.events) * len(epochs.times)
         assert_equal(epochs2.data_frame.shape[0], desired)
-        assert_equal(len(epochs2.saccades_), len(epochs2.events))
+        assert_equal(len(epochs2.saccades), len(epochs2.events))
 
         epochs2 = epochs[['a', 'b']]
         assert_equal(len(epochs2.events), 3)
         assert_equal(set(epochs2.events[:, -1]), set([999, 77]))
         desired = len(epochs2.events) * len(epochs.times)
         assert_equal(epochs2.data_frame.shape[0], desired)
-        assert_equal(len(epochs2.saccades_), len(epochs2.events))
+        assert_equal(len(epochs2.saccades), len(epochs2.events))
         assert_true(np.diff(epochs2.events[:, 0]).min() >= 0)
 
         epochs2 = epochs[slice(1, 3)]
@@ -124,7 +133,7 @@ def test_epochs_io():
         assert_equal(set(epochs2.events[:, -1]), set([999, 77]))
         desired = len(epochs2.events) * len(epochs.times)
         assert_equal(epochs2.data_frame.shape[0], desired)
-        assert_equal(len(epochs2.saccades_), len(epochs2.events))
+        assert_equal(len(epochs2.saccades), len(epochs2.events))
         assert_true(np.diff(epochs2.events[:, 0]).min() >= 0)
 
         data1 = epochs[0].data

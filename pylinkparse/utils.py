@@ -7,6 +7,10 @@ import pandas as pd
 import numpy as np
 
 
+# Store these in one place
+discrete_types = ['saccades', 'fixations', 'blinks']
+
+
 # For python3
 try:
     advance_iterator = next
@@ -14,6 +18,7 @@ except NameError:
     def advance_iterator(it):
         return it.next()
 next = advance_iterator
+
 
 try:
     string_types = basestring  # noqa
