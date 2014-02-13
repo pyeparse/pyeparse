@@ -500,7 +500,7 @@ class Epochs(object):
         zs = self._data['ps'].values.reshape(len(self.events),
                                              len(self.times))
         std = np.nanstd(zs.flat)
-        bl = np.mean(zs[:, baseline[0]:baseline[1] + 1], axis=1)
+        bl = np.nanmean(zs[:, baseline[0]:baseline[1] + 1], axis=1)
         zs -= bl[:, np.newaxis]
         zs /= std
         return zs
