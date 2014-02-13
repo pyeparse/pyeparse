@@ -5,10 +5,13 @@
 import pandas as pd
 import copy
 import numpy as np
+from scipy import optimize
 import warnings
+
 from .event import Discrete
 from .viz import plot_epochs
-from .utils import string_types, discrete_types
+from .utils import string_types, discrete_types, pupil_kernel
+from .parallel import parallel_func
 
 
 class Epochs(object):
@@ -237,6 +240,10 @@ class Epochs(object):
     def ch_names(self):
         return [k for k in self.data_frame.columns]
 
+    @property
+    def n_times(self):
+        return len(self.times)
+
     def __getitem__(self, idx):
         out = self.copy()
         if isinstance(idx, string_types):
@@ -264,6 +271,22 @@ class Epochs(object):
             disc = vars(self)[discrete]
             setattr(out, discrete, Discrete(disc[k] for k in idx))
         return out
+
+    def time_as_index(self, times):
+        """Convert time to indices
+
+        Parameters
+        ----------
+        times : list-like | float | int
+            List of numbers or a number representing points in time.
+
+        Returns
+        -------
+        index : ndarray
+            Indices corresponding to the times supplied.
+        """
+        index = (np.atleast_1d(times) - self.times[0]) * self.info['sfreq']
+        return index.astype(int)
 
     def copy(self):
         """Return a copy of Epochs.
@@ -449,6 +472,117 @@ class Epochs(object):
         epochs.drop_epochs(indices)
         # actually remove the indices
         return epochs, indices
+
+    def pupil_zscores(self, baseline=(None, 0)):
+        """Get normalized pupil data
+
+        Parameters
+        ----------
+        baseline : list
+            2-element list of time points to use as baseline.
+            The default is (None, 0), which uses all negative time.
+
+        Returns
+        -------
+        pupil_data : array
+            An n_epochs x n_time array of pupil size data.
+        """
+        if 'ps' not in self.info['data_cols']:
+            raise RuntimeError('no pupil data')
+        if len(baseline) != 2:
+            raise RuntimeError('baseline must be a 2-element list')
+        baseline = np.array(baseline)
+        if baseline[0] is None:
+            baseline[0] = self.times[0]
+        if baseline[1] is None:
+            baseline[1] = self.times[-1]
+        baseline = self.time_as_index(baseline)
+        zs = self._data['ps'].values.reshape(len(self.events),
+                                             len(self.times))
+        std = np.nanstd(zs.flat)
+        bl = np.mean(zs[:, baseline[0]:baseline[1] + 1], axis=1)
+        zs -= bl[:, np.newaxis]
+        zs /= std
+        return zs
+
+    def deconvolve(self, spacing=0.1, subsampling=10, n_jobs=1):
+        """Deconvolve pupillary responses
+
+        Parameters
+        ----------
+        spacing : float | array
+            Spacing of time points to use for deconvolution. Can also
+            be an array to directly specify time points to use.
+        subsampling : int
+            Number of samples to subsample by. This can greatly speed up
+            calculations. NOTE: the pupil data should be sufficiently
+            low-passed to avoid aliasing.
+        n_jobs : array
+            Number of jobs to run in parallel.
+
+        Returns
+        -------
+        fit : array
+            Array of fits, of size n_epochs x n_fit_times.
+        times : array
+            The array of times at which points were fit.
+
+        Notes
+        -----
+        This method is adapted from:
+
+            Wierda et al., 2012, "Pupil dilation deconvolution reveals the
+            dynamics of attention at high temporal resolution."
+
+        See: http://www.pnas.org/content/109/22/8456.long
+        """
+        # get the data (and make sure it exists)
+        pupil_data = self.pupil_zscores()
+
+        # set up parallel function (and check n_jobs)
+        parallel, p_fun, n_jobs = parallel_func(_do_deconv, n_jobs)
+
+        # figure out where the samples go
+        n_samp = self.n_times
+        if not isinstance(spacing, (np.ndarray, tuple, list)):
+            times = np.arange(self.times[0], self.times[-1], spacing)
+            times = np.unique(times)
+        else:
+            times = np.asanyarray(spacing)
+        samples = self.time_as_index(times)
+
+        # Build the convolution matrix
+        kernel = pupil_kernel(self.info['sfreq'])
+        conv_mat = np.zeros((n_samp, len(samples)))
+        for li, loc in enumerate(samples):
+            eidx = min(loc + len(kernel), n_samp)
+            conv_mat[loc:eidx, li] = kernel[:eidx-loc]
+
+        # do the downsampling
+        idx = np.arange(0, pupil_data.shape[1], subsampling)
+        pupil_data = pupil_data[:, idx]
+        conv_mat = conv_mat[idx, :]
+
+        # do the fitting
+        fit = np.concatenate(parallel(p_fun(data, conv_mat)
+                             for data in np.array_split(pupil_data, n_jobs)))
+        return fit, times
+
+
+def _do_deconv(pupil_data, conv_mat):
+    """Helper to parallelize deconvolution"""
+    guess = np.ones(conv_mat.shape[1])
+    fit = np.empty((len(pupil_data), conv_mat.shape[1]))
+    for di, data in enumerate(pupil_data):
+        out = optimize.minimize(_score, guess, (data, conv_mat),
+                                method='SLSQP',
+                                options=dict(eps=1e-3, ftol=1e-6))
+        fit[di, :] = out.x
+    return fit
+
+
+def _score(vals, x_0, conv_mat):
+    return np.mean((x_0 - conv_mat.dot(vals)) ** 2)
 
 
 def _get_drop_indices(event_times, method):

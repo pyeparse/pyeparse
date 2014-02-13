@@ -7,6 +7,7 @@ from .epochs import Epochs  # noqa
 from .event import find_custom_events  # noqa
 from . import constants  # noqa
 from . import viz  # noqa
+from . import utils  # noqa
 
 
 __version__ = 0.01

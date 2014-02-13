@@ -16,9 +16,24 @@ def _filter_warnings(w):
     return [ww for ww in w if 'Did not find event' in str(ww)]
 
 
+def test_epochs_deconv():
+    """Test epochs deconvolution"""
+    tmin, tmax = -0.5, 1.5
+    event_dict = dict(foo=999, bar=77)
+    events_a = np.array([[12000, 77], [1000, 999]])
+    for fname in fnames:
+        raw = Raw(fname)
+        epochs = Epochs([raw] * 2, [events_a] * 2, event_dict,
+                        tmin, tmax)
+        fit, times = epochs.deconvolve()
+        assert_equal(fit.shape, (len(epochs), len(times)))
+        fit, times = epochs.deconvolve(spacing=[-0.1, 0.4, 1.0])
+        assert_equal(fit.shape, (len(epochs), len(times)))
+        assert_equal(len(times), 3)
+
+
 def test_epochs_combine():
     """Test epochs combine IDs functionality"""
-
     tmin, tmax = -0.5, 1.5
     event_dict = dict(foo=1, bar=2, test=3)
     events_1 = np.array([[12000, 1], [1000, 2], [10000, 2], [2000, 3]])
@@ -44,7 +59,6 @@ def test_epochs_combine():
 
 def test_epochs_concat():
     """Test epochs concatenation"""
-
     tmin, tmax = -0.5, 1.5
     event_dict = dict(foo=999, bar=77)
     events_a = np.array([[12000, 77], [1000, 999]])
@@ -86,7 +100,6 @@ def test_epochs_concat():
 
 def test_epochs_io():
     """Test epochs IO functionality"""
-
     tmin, tmax, event_id = -0.5, 1.5, 999
     missing_event_dict = dict(foo=999, bar=555)
     # create some evil events
