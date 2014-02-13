@@ -2,12 +2,12 @@
 #
 # License: BSD (3-clause)
 
-import pylinkparse as plp
+import pyeparse as pp
 import numpy as np
 
-fname = '../pylinkparse/tests/data/test_raw.asc'
+fname = '../pyeparse/tests/data/test_raw.asc'
 
-raw = plp.Raw(fname)
+raw = pp.Raw(fname)
 
 # visualize initial calibration
 raw.plot_calibration(title='9-Point Calibration')
@@ -18,8 +18,8 @@ raw.plot_heatmap(start=10., stop=85.)
 # find events and epoch data
 events = raw.find_events('user-event', event_id=1)
 tmin, tmax, event_id = -0.5, 1.5, 1
-epochs = plp.Epochs(raw, events=events, event_id=event_id, tmin=tmin,
-                    tmax=tmax)
+epochs = pp.Epochs(raw, events=events, event_id=event_id, tmin=tmin,
+                   tmax=tmax)
 
 # access pandas data frame and plot single epoch
 import pylab as pl

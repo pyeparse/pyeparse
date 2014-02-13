@@ -1,6 +1,6 @@
 [run]
 branch = True
-source = pylinkparse
-include = *pylinkparse/*
+source = pyeparse
+include = *pyeparse/*
 omit =
     *setup.py

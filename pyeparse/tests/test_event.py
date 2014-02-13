@@ -1,16 +1,16 @@
 import numpy as np
 import pandas as pd
 import warnings
+from os import path as op
 from nose.tools import assert_true
 from numpy.testing import assert_equal
 
-from pylinkparse import Raw
-from pylinkparse.event import find_custom_events, Discrete
+from pyeparse import Raw
+from pyeparse.event import find_custom_events, Discrete
 
 warnings.simplefilter('always')  # in case we hit warnings
 
-path = 'pylinkparse/tests/data/'
-fname = path + 'test_raw.asc'
+fname = op.join(op.dirname(__file__), 'data', 'test_raw.asc')
 
 
 def test_find_custom_events():

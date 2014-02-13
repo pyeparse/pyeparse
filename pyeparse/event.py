@@ -24,7 +24,7 @@ def find_events(raw, pattern, event_id):
 
     Parameters
     ----------
-    raw : instance of pylinkparse.raw.Raw
+    raw : instance of pyeparse.raw.Raw
         the raw file to find events in.
     pattern : str | callable
         A substring to be matched or a callable that matches
@@ -57,7 +57,7 @@ def find_custom_events(raw, pattern, event_id, prefix=True, sep='\W+',
 
     Parameters
     ----------
-    raw : instance of pylinkparse.raw.Raw
+    raw : instance of pyeparse.raw.Raw
         the raw file to find events in.
     pattern : str
         A substring to be matched (using regular expressions).

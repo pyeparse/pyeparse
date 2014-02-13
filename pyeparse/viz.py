@@ -14,7 +14,7 @@ def plot_calibration(raw, title='Calibration', show=True):
 
     Parameters
     ----------
-    raw : instance of pylinkparse raw
+    raw : instance of pyeparse raw
         The raw object to be visualized
     title : str
         The title to be displayed.
@@ -124,7 +124,7 @@ def plot_heatmap_raw(raw, start=None, stop=None, cmap=None,
 
     Parameters
     ----------
-    raw : instance of pylinkparse raw
+    raw : instance of pyeparse raw
         The raw object to be visualized
     start : float | None
         Start time in seconds.
@@ -338,7 +338,7 @@ def plot_epochs(epochs, epoch_idx=None, picks=None, n_chunks=20,
     Parameters
     ----------
 
-    epochs : instance of pylinkparse.epochs.Epochs
+    epochs : instance of pyeparse.Epochs
         The epochs object
     epoch_idx : array-like | int | None
         The epochs to visualize. If None, the first 20 epochs are shown.

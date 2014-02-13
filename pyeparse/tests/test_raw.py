@@ -4,8 +4,8 @@ import warnings
 from os import path as op
 from nose.tools import assert_true, assert_equal
 
-from pylinkparse import Raw
-from pylinkparse.constants import EDF, dtype_dict
+from pyeparse import Raw
+from pyeparse.constants import EDF, dtype_dict
 
 warnings.simplefilter('always')  # in case we hit warnings
 

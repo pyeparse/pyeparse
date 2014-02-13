@@ -1,5 +1,5 @@
 .. -*- mode: rst -*-
-`PyLinkParse <https://github.com/dengemann/PyLinkParse>`_
+`pyeparse <https://github.com/dengemann/pyeparse>`_
 =======================================================
 
 This package is designed for interactive as well as scripting-oriented processing
@@ -22,7 +22,7 @@ Before you get started, a few things to point out:
 Get more information
 ^^^^^^^^^^^^^^^^^^^^
 
-This page only contains bare-bones instructions for installing PyLinkParse.
+This page only contains bare-bones instructions for installing pyeparse.
 
 
 Get the latest code
@@ -30,14 +30,14 @@ Get the latest code
 
 To get the latest code using git, simply type::
 
-    git clone git@github.com:dengemann/PyLinkParse.git
+    git clone git@github.com:dengemann/pyeparse.git
 
 If you don't have git installed, you can download a zip or tarball
 of the latest code:: 
     
-    git@github.com:dengemann/PyLinkParse.git
+    git@github.com:dengemann/pyeparse.git
 
-Install PyLinkParse
+Install pyeparse
 ^^^^^^^^^^^^^^^^^^^
 
 As any Python packages, to install PyLink, go in the source
@@ -60,12 +60,12 @@ NumPy >= 1.4, and Pandas >= 0.7.3
 Licensing
 ^^^^^^^^^
 
-PyLinkParse is **BSD-licenced** (3 clause):
+pyeparse is **BSD-licenced** (3 clause):
 
     This software is OSI Certified Open Source Software.
     OSI Certified is a certification mark of the Open Source Initiative.
 
-    Copyright (c) 2012-2013, authors of PyLinkParse
+    Copyright (c) 2012-2013, authors of pyeparse
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -78,7 +78,7 @@ PyLinkParse is **BSD-licenced** (3 clause):
       this list of conditions and the following disclaimer in the documentation
       and/or other materials provided with the distribution.
 
-    * Neither the names of PyLinkParse authors nor the names of any
+    * Neither the names of pyeparse authors nor the names of any
       contributors may be used to endorse or promote products derived from
       this software without specific prior written permission.
 

@@ -7,7 +7,7 @@ import pandas as pd
 import warnings
 from nose.tools import assert_true
 
-from pylinkparse.utils import safe_bool
+from pyeparse.utils import safe_bool
 
 warnings.simplefilter('always')  # in case we hit warnings
 
