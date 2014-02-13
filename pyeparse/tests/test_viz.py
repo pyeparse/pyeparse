@@ -5,8 +5,8 @@ from os import path as op
 import warnings
 import matplotlib
 
-from pylinkparse import Raw, Epochs
-from pylinkparse.viz import _epochs_axes_onclick, _epochs_navigation_onclick
+from pyeparse import Raw, Epochs
+from pyeparse.viz import _epochs_axes_onclick, _epochs_navigation_onclick
 
 warnings.simplefilter('always')  # in case we hit warnings
 matplotlib.use('Agg')  # for testing don't use X server

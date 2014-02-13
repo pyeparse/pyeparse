@@ -25,7 +25,7 @@ clean: clean-build clean-pyc clean-so clean-ctags
 
 flake:
 	if command -v flake8 > /dev/null; then \
-	    flake8 --count pylinkparse examples; \
+	    flake8 --count pyeparse examples; \
 	fi
 
 in: inplace # just a shortcut
@@ -34,7 +34,7 @@ inplace:
 
 nosetests:
 	rm -f .coverage
-	$(NOSETESTS) pylinkparse
+	$(NOSETESTS) pyeparse
 
 test: clean nosetests flake
 

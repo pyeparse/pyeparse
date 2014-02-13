@@ -3,20 +3,20 @@
 # License: BSD (3-clause)
 
 import os
-import pylinkparse
+import pyeparse
 
-import setuptools  # we are using a setuptools namespace
+import setuptools  # analysis:ignore noqa we are using a setuptools namespace
 from numpy.distutils.core import setup
 
 descr = """PyLinkParse project for eye tracking data analysis."""
 
-DISTNAME            = 'pylinkparse'
-DESCRIPTION         = descr
-MAINTAINER          = 'Denis A. Engemann'
-MAINTAINER_EMAIL    = 'd.engemann@fz-juelich.de'
-LICENSE             = 'BSD (3-clause)'
-DOWNLOAD_URL        = 'https://github.com/dengemann/PyLinkParse.git'
-VERSION             = pylinkparse.__version__
+DISTNAME = 'pyeparse'
+DESCRIPTION = descr
+MAINTAINER = 'Denis A. Engemann'
+MAINTAINER_EMAIL = 'd.engemann@fz-juelich.de'
+LICENSE = 'BSD (3-clause)'
+DOWNLOAD_URL = 'https://github.com/dengemann/PyLinkParse.git'
+VERSION = pyeparse.__version__
 
 
 if __name__ == "__main__":
@@ -44,5 +44,4 @@ if __name__ == "__main__":
                        'Operating System :: Unix',
                        'Operating System :: MacOS'],
           platforms='any',
-          packages=['pylinkparse', 'pylinkparse.tests'])
-
+          packages=['pyeparse', 'pyeparse.tests'])

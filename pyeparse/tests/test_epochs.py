@@ -5,11 +5,11 @@ from numpy.testing import assert_equal, assert_array_equal
 from nose.tools import assert_true, assert_raises
 import glob
 
-from pylinkparse import Raw, Epochs
+from pyeparse import Raw, Epochs
 
 warnings.simplefilter('always')  # in case we hit warnings
 
-fnames = glob.glob(op.join(op.split(__file__)[0], 'data', '*raw.asc'))
+fnames = glob.glob(op.join(op.dirname(__file__), 'data', '*raw.asc'))
 
 
 def _filter_warnings(w):

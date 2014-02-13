@@ -39,10 +39,10 @@ install:
     - SRC_DIR=$(pwd)
     - cd ~
     # We will run tests from vispy dir to test our install worked
-    - PLP_DIR=$(python -c 'import pylinkparse;print(pylinkparse.__path__[0])')
+    - PLP_DIR=$(python -c 'import pyeparse;print(pyeparse.__path__[0])')
     # Link coverage to src dir, coveralls should be run from there (needs git calls)
     - ln -s ${PLP_DIR}/../.coverage ${SRC_DIR}/.coverage
-    - ln -s ${SRC_DIR}/pylinkparse/tests/data ${PLP_DIR}/tests/data
+    - ln -s ${SRC_DIR}/pyeparse/tests/data ${PLP_DIR}/tests/data
     - ln -s ${SRC_DIR}/.coveragerc ${PLP_DIR}/../.coveragerc
     - ln -s ${SRC_DIR}/setup.cfg ${PLP_DIR}/../setup.cfg
 

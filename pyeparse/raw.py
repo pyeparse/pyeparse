@@ -450,7 +450,7 @@ class Raw(object):
 
         Parameters
         ----------
-        raw : instance of pylinkparse.raw.Raw
+        raw : instance of pyeparse.raw.Raw
             the raw file to find events in.
         pattern : str | callable
             A substring to be matched or a callable that matches
