@@ -55,6 +55,14 @@ def test_epochs_concat():
                            tmin, tmax)
         epochs_ba = Epochs([raw] * 2, [events_b, events_a], event_dict,
                            tmin, tmax)
+        # make sure discretes made it through
+        for epochs in [epochs_ab, epochs_ba]:
+            for d in [epochs.blinks, epochs.saccades, epochs_ab.fixations]:
+                assert_equal(len(d), len(epochs))
+                for dd in d:
+                    if len(dd) > 0:
+                        t = dd.loc[:, ['stime', 'etime']].values
+                        assert_true(np.all(t >= tmin) & np.all(t <= tmax))
         assert_equal(len(epochs_ab.events), 4)
         assert_equal(len(epochs_ba.events), 4)
         assert_array_equal(epochs_ab.times, epochs_ba.times)

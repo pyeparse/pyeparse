@@ -54,8 +54,8 @@ class Epochs(object):
             event_keys = dict()
             my_event_id = event_id.values()
             for k, v in event_id.items():
-                if v not in np.concatenate(events)[:, 1] and \
-                        not ignore_missing:
+                if (not ignore_missing and
+                        v not in np.concatenate(events)[:, 1]):
                     warnings.warn('Did not find event id %i' % v,
                                   RuntimeWarning)
                 event_keys[v] = k
