@@ -1,22 +1,107 @@
 import numpy as np
 from os import path as op
+import warnings
 from numpy.testing import assert_equal, assert_array_equal
-from nose.tools import assert_true
+from nose.tools import assert_true, assert_raises
 import glob
 
 from pylinkparse import Raw, Epochs
 
+warnings.simplefilter('always')  # in case we hit warnings
+
 fnames = glob.glob(op.join(op.split(__file__)[0], 'data', '*raw.asc'))
+
+
+def _filter_warnings(w):
+    return [ww for ww in w if 'Did not find event' in str(ww)]
+
+
+def test_epochs_combine():
+    """Test epochs combine IDs functionality"""
+
+    tmin, tmax = -0.5, 1.5
+    event_dict = dict(foo=1, bar=2, test=3)
+    events_1 = np.array([[12000, 1], [1000, 2], [10000, 2], [2000, 3]])
+    events_2 = np.array([[12000, 2], [1000, 1], [10000, 1], [2000, 3]])
+    for fname in fnames:
+        raw = Raw(fname)
+        epochs_1 = Epochs(raw, events_1, event_dict, tmin, tmax)
+        epochs_2 = Epochs(raw, events_2, event_dict, tmin, tmax)
+        assert_raises(ValueError, epochs_1.combine_event_ids, ['foo', 'bar'],
+                      dict(foobar=1))
+        epochs_1.combine_event_ids(['foo', 'bar'], 12)
+        epochs_2.combine_event_ids(['foo', 'bar'], dict(foobar=12))
+        d1 = epochs_1.data
+        d2 = epochs_2.data
+        assert_array_equal(d1, d2)
+
+        epochs_1.equalize_event_counts(['12', 'test'])
+        epochs_2.equalize_event_counts(['foobar', 'test'])
+        d1 = epochs_1.data
+        d2 = epochs_2.data
+        assert_array_equal(d1, d2)
+
+
+def test_epochs_concat():
+    """Test epochs concatenation"""
+
+    tmin, tmax = -0.5, 1.5
+    event_dict = dict(foo=999, bar=77)
+    events_a = np.array([[12000, 77], [1000, 999]])
+    events_b = np.array([[1000, 999], [10000, 999]])
+    for fname in fnames:
+        raw = Raw(fname)
+        epochs_ab = Epochs([raw] * 2, [events_a, events_b], event_dict,
+                           tmin, tmax)
+        epochs_ba = Epochs([raw] * 2, [events_b, events_a], event_dict,
+                           tmin, tmax)
+        # make sure discretes made it through
+        for epochs in [epochs_ab, epochs_ba]:
+            for d in [epochs.blinks, epochs.saccades, epochs_ab.fixations]:
+                assert_equal(len(d), len(epochs))
+                for dd in d:
+                    if len(dd) > 0:
+                        t = dd.loc[:, ['stime', 'etime']].values
+                        assert_true(np.all(t >= tmin) & np.all(t <= tmax))
+        assert_equal(len(epochs_ab.events), 4)
+        assert_equal(len(epochs_ba.events), 4)
+        assert_array_equal(epochs_ab.times, epochs_ba.times)
+        # make sure event numbers match
+        reord = [2, 3, 0, 1]
+        assert_array_equal(epochs_ab.events[:, 1], epochs_ba.events[reord, 1])
+        # make sure actual data matches
+        data_ab = epochs_ab.data
+        data_ba = epochs_ba.data
+        assert_array_equal(data_ab, data_ba[reord])
+        # test discretes
+        assert_equal(len(epochs_ab.blinks), len(epochs_ba.blinks))
+        blink_ab = epochs_ab.blinks[3]
+        blink_ba = epochs_ba.blinks[reord[3]]
+        assert_equal(len(blink_ab), len(blink_ba))
+        assert_true(len(blink_ab) > 0)  # make sure we've tested useful case
+        blink_ab_d = blink_ab.loc[:, ['stime', 'etime']].values
+        blink_ba_d = blink_ba.loc[:, ['stime', 'etime']].values
+        assert_array_equal(blink_ab_d, blink_ba_d)
 
 
 def test_epochs_io():
     """Test epochs IO functionality"""
 
     tmin, tmax, event_id = -0.5, 1.5, 999
+    missing_event_dict = dict(foo=999, bar=555)
     # create some evil events
     events = np.array([[12000, 77], [1000, 999], [10000, 999]])
     for fname in fnames:
         raw = Raw(fname)
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter('always')
+            epochs = Epochs(raw, events, missing_event_dict, tmin, tmax,
+                            ignore_missing=True)
+        assert_equal(len(_filter_warnings(w)), 0)
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter('always')
+            epochs = Epochs(raw, events, missing_event_dict, tmin, tmax)
+        assert_equal(len(_filter_warnings(w)), 1)
         epochs = Epochs(raw, events, event_id, tmin, tmax)
         print(epochs)  # test repr works
         for disc in epochs.info['discretes']:
@@ -52,7 +137,7 @@ def test_epochs_io():
         assert_equal(set(epochs2.events[:, -1]), set([999]))
         desired = len(epochs2.events) * len(epochs.times)
         assert_equal(epochs2.data_frame.shape[0], desired)
-        assert_equal(len(epochs2.saccades_), len(epochs2.events))
+        assert_equal(len(epochs2.saccades), len(epochs2.events))
         assert_true(epochs2.data_frame['time'].diff().min() >= 0)
 
         epochs2 = epochs[[1, 0]]
@@ -60,21 +145,21 @@ def test_epochs_io():
         assert_equal(set(epochs2.events[:, -1]), set([999]))
         desired = len(epochs2.events) * len(epochs.times)
         assert_equal(epochs2.data_frame.shape[0], desired)
-        assert_equal(len(epochs2.saccades_), len(epochs2.events))
+        assert_equal(len(epochs2.saccades), len(epochs2.events))
 
         epochs2 = epochs['a']
         assert_equal(len(epochs2.events), 2)
         assert_equal(set(epochs2.events[:, -1]), set([999]))
         desired = len(epochs2.events) * len(epochs.times)
         assert_equal(epochs2.data_frame.shape[0], desired)
-        assert_equal(len(epochs2.saccades_), len(epochs2.events))
+        assert_equal(len(epochs2.saccades), len(epochs2.events))
 
         epochs2 = epochs[['a', 'b']]
         assert_equal(len(epochs2.events), 3)
         assert_equal(set(epochs2.events[:, -1]), set([999, 77]))
         desired = len(epochs2.events) * len(epochs.times)
         assert_equal(epochs2.data_frame.shape[0], desired)
-        assert_equal(len(epochs2.saccades_), len(epochs2.events))
+        assert_equal(len(epochs2.saccades), len(epochs2.events))
         assert_true(np.diff(epochs2.events[:, 0]).min() >= 0)
 
         epochs2 = epochs[slice(1, 3)]
@@ -82,7 +167,7 @@ def test_epochs_io():
         assert_equal(set(epochs2.events[:, -1]), set([999, 77]))
         desired = len(epochs2.events) * len(epochs.times)
         assert_equal(epochs2.data_frame.shape[0], desired)
-        assert_equal(len(epochs2.saccades_), len(epochs2.events))
+        assert_equal(len(epochs2.saccades), len(epochs2.events))
         assert_true(np.diff(epochs2.events[:, 0]).min() >= 0)
 
         data1 = epochs[0].data
