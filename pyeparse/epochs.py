@@ -507,7 +507,7 @@ class Epochs(object):
         return zs
 
     def deconvolve(self, spacing=0.1, subsampling=10, baseline=(None, 0),
-                   bounds=(0, np.inf), max_iter=500, n_jobs=1):
+                   bounds=None, max_iter=500, n_jobs=1):
         """Deconvolve pupillary responses
 
         Parameters
