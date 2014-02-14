@@ -573,6 +573,8 @@ class Epochs(object):
         # convert bounds to slsqp representation
         if bounds is not None:
             bounds = np.array([bounds for _ in range(len(samples))])
+        else:
+            bounds = []  # compatible with old version of scipy
 
         # Build the convolution matrix
         kernel = pupil_kernel(self.info['sfreq'])
