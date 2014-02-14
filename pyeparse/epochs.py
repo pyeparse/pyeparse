@@ -5,7 +5,7 @@
 import pandas as pd
 import copy
 import numpy as np
-from scipy.optimize import minimize
+from scipy.optimize import fmin_slsqp
 import warnings
 
 from .event import Discrete
@@ -90,10 +90,10 @@ class Epochs(object):
 
         # Need to add offsets to our epoch indices
         offset = 0
-        for _samp in _samples:
+        for si, _samp in enumerate(_samples):
             use_offset = offset
             for _s in _samp:
-                _s.epoch_idx += use_offset
+                _s.loc[:, 'epoch_idx'] += use_offset
                 offset += len(_s.epoch_idx.unique())
 
         # flattening is important, otherwise concatenation fails,
@@ -162,7 +162,8 @@ class Epochs(object):
                     this_id = (this_id if event_keys is None else
                                event_keys[this_id])
                     if inds.any().any():
-                        df = this_in.ix[inds]
+                        # explicitly copy to avoid annoying warnings
+                        df = this_in.ix[inds].copy()
                         df['event_id'] = this_id
                         df.loc[:, 'stime'] -= this_time
                         df.loc[:, 'etime'] -= this_time
@@ -187,7 +188,7 @@ class Epochs(object):
             this_id = this_id if event_keys is None else event_keys[this_id]
             df['event_id'] = this_id
             df['epoch_idx'] = count
-            _samples.append(df)
+            _samples.append(df.copy())  # explicitly copy so no warn later
             track_inds.extend([len(i) for i in ind])
 
         assert set(track_inds) == set([self._n_times])
@@ -506,7 +507,7 @@ class Epochs(object):
         return zs
 
     def deconvolve(self, spacing=0.1, subsampling=10, baseline=(None, 0),
-                   n_jobs=1):
+                   bounds=(0, np.inf), max_iter=500, n_jobs=1):
         """Deconvolve pupillary responses
 
         Parameters
@@ -522,6 +523,11 @@ class Epochs(object):
             2-element list of time points to use as baseline.
             The default is (None, 0), which uses all negative time.
             This is passed to pupil_zscores().
+        bounds : 2-element array | None
+            Limits for deconvolution values. Can be, e.g. (0, np.inf) to
+            constrain to positive values.
+        max_iter : int
+            Maximum number of iterations of minimization algorithm.
         n_jobs : array
             Number of jobs to run in parallel.
 
@@ -541,6 +547,11 @@ class Epochs(object):
 
         See: http://www.pnas.org/content/109/22/8456.long
         """
+        if bounds is not None:
+            bounds = np.array(bounds)
+            if bounds.ndim != 1 or bounds.size != 2:
+                raise RuntimeError('bounds must be 2-element array or None')
+
         # get the data (and make sure it exists)
         pupil_data = self.pupil_zscores(baseline)
 
@@ -555,6 +566,13 @@ class Epochs(object):
         else:
             times = np.asanyarray(spacing)
         samples = self.time_as_index(times)
+        if len(samples) == 0:
+            warnings.warn('No usable samples')
+            return np.array([]), np.array([])
+
+        # convert bounds to slsqp representation
+        if bounds is not None:
+            bounds = np.array([bounds for _ in range(len(samples))])
 
         # Build the convolution matrix
         kernel = pupil_kernel(self.info['sfreq'])
@@ -569,20 +587,30 @@ class Epochs(object):
         conv_mat = conv_mat[idx, :]
 
         # do the fitting
-        fit = np.concatenate(parallel(p_fun(data, conv_mat)
-                             for data in np.array_split(pupil_data, n_jobs)))
+        fit_fails = parallel(p_fun(data, conv_mat, bounds, max_iter)
+                             for data in np.array_split(pupil_data, n_jobs))
+        fit = np.concatenate([f[0] for f in fit_fails])
+        fails = np.concatenate([f[1] for f in fit_fails])
+        if np.any(fails):
+            reasons = ', '.join(str(r) for r in
+                                np.setdiff1d(np.unique(fails), [0]))
+            warnings.warn('%i/%i fits did not converge (reasons: %s)'
+                          % (np.sum(fails), len(fails), reasons))
         return fit, times
 
 
-def _do_deconv(pupil_data, conv_mat):
+def _do_deconv(pupil_data, conv_mat, bounds, max_iter):
     """Helper to parallelize deconvolution"""
-    guess = np.ones(conv_mat.shape[1])
+    x0 = np.ones(conv_mat.shape[1])
     fit = np.empty((len(pupil_data), conv_mat.shape[1]))
+    failed = np.empty(len(pupil_data))
     for di, data in enumerate(pupil_data):
-        out = minimize(_score, guess, (data, conv_mat), method='SLSQP',
-                       options=dict(eps=1e-3, ftol=1e-6))
-        fit[di, :] = out.x
-    return fit
+        out = fmin_slsqp(_score, x0, args=(data, conv_mat), epsilon=1e-3,
+                         bounds=bounds, disp=False, full_output=True,
+                         iter=max_iter, acc=1e-6)
+        fit[di, :] = out[0]
+        failed[di] = out[3]
+    return fit, failed
 
 
 def _score(vals, x_0, conv_mat):
