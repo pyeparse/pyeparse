@@ -5,7 +5,7 @@
 import pandas as pd
 import copy
 import numpy as np
-from scipy import optimize
+from scipy.optimize import minimize
 import warnings
 
 from .event import Discrete
@@ -505,7 +505,8 @@ class Epochs(object):
         zs /= std
         return zs
 
-    def deconvolve(self, spacing=0.1, subsampling=10, n_jobs=1):
+    def deconvolve(self, spacing=0.1, subsampling=10, baseline=(None, 0),
+                   n_jobs=1):
         """Deconvolve pupillary responses
 
         Parameters
@@ -517,6 +518,10 @@ class Epochs(object):
             Number of samples to subsample by. This can greatly speed up
             calculations. NOTE: the pupil data should be sufficiently
             low-passed to avoid aliasing.
+        baseline : list
+            2-element list of time points to use as baseline.
+            The default is (None, 0), which uses all negative time.
+            This is passed to pupil_zscores().
         n_jobs : array
             Number of jobs to run in parallel.
 
@@ -537,7 +542,7 @@ class Epochs(object):
         See: http://www.pnas.org/content/109/22/8456.long
         """
         # get the data (and make sure it exists)
-        pupil_data = self.pupil_zscores()
+        pupil_data = self.pupil_zscores(baseline)
 
         # set up parallel function (and check n_jobs)
         parallel, p_fun, n_jobs = parallel_func(_do_deconv, n_jobs)
@@ -574,9 +579,8 @@ def _do_deconv(pupil_data, conv_mat):
     guess = np.ones(conv_mat.shape[1])
     fit = np.empty((len(pupil_data), conv_mat.shape[1]))
     for di, data in enumerate(pupil_data):
-        out = optimize.minimize(_score, guess, (data, conv_mat),
-                                method='SLSQP',
-                                options=dict(eps=1e-3, ftol=1e-6))
+        out = minimize(_score, guess, (data, conv_mat), method='SLSQP',
+                       options=dict(eps=1e-3, ftol=1e-6))
         fit[di, :] = out.x
     return fit
 
