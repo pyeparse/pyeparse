@@ -506,8 +506,8 @@ class Epochs(object):
         zs /= std
         return zs
 
-    def deconvolve(self, spacing=0.1, subsampling=10, baseline=(None, 0),
-                   bounds=None, max_iter=500, n_jobs=1):
+    def deconvolve(self, spacing=0.1, baseline=(None, 0), bounds=None,
+                   max_iter=500, n_jobs=1):
         """Deconvolve pupillary responses
 
         Parameters
@@ -515,10 +515,6 @@ class Epochs(object):
         spacing : float | array
             Spacing of time points to use for deconvolution. Can also
             be an array to directly specify time points to use.
-        subsampling : int
-            Number of samples to subsample by. This can greatly speed up
-            calculations. NOTE: the pupil data should be sufficiently
-            low-passed to avoid aliasing.
         baseline : list
             2-element list of time points to use as baseline.
             The default is (None, 0), which uses all negative time.
@@ -546,6 +542,10 @@ class Epochs(object):
             dynamics of attention at high temporal resolution."
 
         See: http://www.pnas.org/content/109/22/8456.long
+
+        Our implementation does not, by default, force all weights to be
+        greater than zero. It also does not do first-order detrending,
+        which the Wierda paper discusses implementing.
         """
         if bounds is not None:
             bounds = np.array(bounds)
@@ -582,11 +582,6 @@ class Epochs(object):
         for li, loc in enumerate(samples):
             eidx = min(loc + len(kernel), n_samp)
             conv_mat[loc:eidx, li] = kernel[:eidx-loc]
-
-        # do the downsampling
-        idx = np.arange(0, pupil_data.shape[1], subsampling)
-        pupil_data = pupil_data[:, idx]
-        conv_mat = conv_mat[idx, :]
 
         # do the fitting
         fit_fails = parallel(p_fun(data, conv_mat, bounds, max_iter)
