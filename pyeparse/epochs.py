@@ -595,7 +595,7 @@ class Epochs(object):
             reasons = ', '.join(str(r) for r in
                                 np.setdiff1d(np.unique(fails), [0]))
             warnings.warn('%i/%i fits did not converge (reasons: %s)'
-                          % (np.sum(fails), len(fails), reasons))
+                          % (np.sum(fails != 0), len(fails), reasons))
         return fit, times
 
 
