@@ -465,7 +465,8 @@ class Raw(object):
         """
         return find_events(raw=self, pattern=pattern, event_id=event_id)
 
-    def remove_blink_artifacts(self, interp='linear', border=0.01):
+    def remove_blink_artifacts(self, interp='linear', borders=(0.025, 0.1),
+                               use_only_blink=False):
         """Remove blink artifacts from gaze data
 
         This function uses the timing of saccade events to clean up
@@ -479,23 +480,42 @@ class Raw(object):
             are inserted to help clean data. (The ``nan`` values inserted
             by Eyelink itself typically do not span the entire blink
             duration.)
-        border : float
+        borders : float | list of float
             Time on each side of the saccade event to use as a border
-            (in seconds). This will be additional time that is eliminated
-            as invalid and interpolated over (or turned into ``nan``).
+            (in seconds). Can be a 2-element list to supply different borders
+            for before and after the blink. This will be additional time
+            that is eliminated as invalid and interpolated over
+            (or turned into ``nan``).
+        use_only_blink : bool
+            If True, interpolate only over regions where a blink event
+            occurred. If False, interpolate over all regions during
+            which saccades occurred -- this is generally safer because
+            Eyelink will not always categorize blinks correctly.
         """
         if interp is not None and interp not in ['linear', 'zoh']:
             raise ValueError('interp must be None, "linear", or "zoh", not '
                              '"%s"' % interp)
-        starts = self.discrete['saccades']['stime'].values - border
-        ends = self.discrete['saccades']['etime'].values + border
-        idx = np.logical_and(starts > 0, ends < self.n_samples - 1)
-        starts = starts[idx]
-        ends = ends[idx]
-        # prevent collisions
-        goods = starts[1:] > ends[:-1]
-        starts = starts[np.concatenate([[True], goods])]
-        ends = ends[np.concatenate([goods, [True]])]
+        borders = np.array(borders)
+        if borders.size == 1:
+            borders == np.array([borders, borders])
+        blinks = self.discrete['blinks']['stime'].values
+        starts = self.discrete['saccades']['stime'].values
+        ends = self.discrete['saccades']['etime'].values
+        # only use saccades that enclose a blink
+        if use_only_blink:
+            use = np.searchsorted(ends, blinks)
+            ends = ends[use]
+            starts = starts[use]
+        starts = starts - borders[0]
+        ends = ends + borders[1]
+        # eliminate overlaps and unusable ones
+        etime = (self.n_samples - 1) / self.info['sfreq']
+        use = np.logical_and(starts > 0, ends < etime)
+        starts = starts[use]
+        ends = ends[use]
+        use = starts[1:] > ends[:-1]
+        starts = starts[np.concatenate([[True], use])]
+        ends = ends[np.concatenate([use, [True]])]
         assert len(starts) == len(ends)
         for stime, etime in zip(starts, ends):
             sidx, eidx = self.time_as_index([stime, etime])

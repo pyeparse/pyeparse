@@ -5,10 +5,13 @@
 import pandas as pd
 import copy
 import numpy as np
+from scipy.optimize import fmin_slsqp
 import warnings
+
 from .event import Discrete
 from .viz import plot_epochs
-from .utils import string_types, discrete_types
+from .utils import string_types, discrete_types, pupil_kernel
+from .parallel import parallel_func
 
 
 class Epochs(object):
@@ -87,10 +90,10 @@ class Epochs(object):
 
         # Need to add offsets to our epoch indices
         offset = 0
-        for _samp in _samples:
+        for si, _samp in enumerate(_samples):
             use_offset = offset
             for _s in _samp:
-                _s.epoch_idx += use_offset
+                _s.loc[:, 'epoch_idx'] += use_offset
                 offset += len(_s.epoch_idx.unique())
 
         # flattening is important, otherwise concatenation fails,
@@ -159,7 +162,8 @@ class Epochs(object):
                     this_id = (this_id if event_keys is None else
                                event_keys[this_id])
                     if inds.any().any():
-                        df = this_in.ix[inds]
+                        # explicitly copy to avoid annoying warnings
+                        df = this_in.ix[inds].copy()
                         df['event_id'] = this_id
                         df.loc[:, 'stime'] -= this_time
                         df.loc[:, 'etime'] -= this_time
@@ -184,7 +188,7 @@ class Epochs(object):
             this_id = this_id if event_keys is None else event_keys[this_id]
             df['event_id'] = this_id
             df['epoch_idx'] = count
-            _samples.append(df)
+            _samples.append(df.copy())  # explicitly copy so no warn later
             track_inds.extend([len(i) for i in ind])
 
         assert set(track_inds) == set([self._n_times])
@@ -237,6 +241,10 @@ class Epochs(object):
     def ch_names(self):
         return [k for k in self.data_frame.columns]
 
+    @property
+    def n_times(self):
+        return len(self.times)
+
     def __getitem__(self, idx):
         out = self.copy()
         if isinstance(idx, string_types):
@@ -264,6 +272,22 @@ class Epochs(object):
             disc = vars(self)[discrete]
             setattr(out, discrete, Discrete(disc[k] for k in idx))
         return out
+
+    def time_as_index(self, times):
+        """Convert time to indices
+
+        Parameters
+        ----------
+        times : list-like | float | int
+            List of numbers or a number representing points in time.
+
+        Returns
+        -------
+        index : ndarray
+            Indices corresponding to the times supplied.
+        """
+        index = (np.atleast_1d(times) - self.times[0]) * self.info['sfreq']
+        return index.astype(int)
 
     def copy(self):
         """Return a copy of Epochs.
@@ -449,6 +473,145 @@ class Epochs(object):
         epochs.drop_epochs(indices)
         # actually remove the indices
         return epochs, indices
+
+    def pupil_zscores(self, baseline=(None, 0)):
+        """Get normalized pupil data
+
+        Parameters
+        ----------
+        baseline : list
+            2-element list of time points to use as baseline.
+            The default is (None, 0), which uses all negative time.
+
+        Returns
+        -------
+        pupil_data : array
+            An n_epochs x n_time array of pupil size data.
+        """
+        if 'ps' not in self.info['data_cols']:
+            raise RuntimeError('no pupil data')
+        if len(baseline) != 2:
+            raise RuntimeError('baseline must be a 2-element list')
+        baseline = np.array(baseline)
+        if baseline[0] is None:
+            baseline[0] = self.times[0]
+        if baseline[1] is None:
+            baseline[1] = self.times[-1]
+        baseline = self.time_as_index(baseline)
+        zs = self._data['ps'].values.reshape(len(self.events),
+                                             len(self.times))
+        std = np.nanstd(zs.flat)
+        bl = np.nanmean(zs[:, baseline[0]:baseline[1] + 1], axis=1)
+        zs -= bl[:, np.newaxis]
+        zs /= std
+        return zs
+
+    def deconvolve(self, spacing=0.1, baseline=(None, 0), bounds=None,
+                   max_iter=500, n_jobs=1):
+        """Deconvolve pupillary responses
+
+        Parameters
+        ----------
+        spacing : float | array
+            Spacing of time points to use for deconvolution. Can also
+            be an array to directly specify time points to use.
+        baseline : list
+            2-element list of time points to use as baseline.
+            The default is (None, 0), which uses all negative time.
+            This is passed to pupil_zscores().
+        bounds : 2-element array | None
+            Limits for deconvolution values. Can be, e.g. (0, np.inf) to
+            constrain to positive values.
+        max_iter : int
+            Maximum number of iterations of minimization algorithm.
+        n_jobs : array
+            Number of jobs to run in parallel.
+
+        Returns
+        -------
+        fit : array
+            Array of fits, of size n_epochs x n_fit_times.
+        times : array
+            The array of times at which points were fit.
+
+        Notes
+        -----
+        This method is adapted from:
+
+            Wierda et al., 2012, "Pupil dilation deconvolution reveals the
+            dynamics of attention at high temporal resolution."
+
+        See: http://www.pnas.org/content/109/22/8456.long
+
+        Our implementation does not, by default, force all weights to be
+        greater than zero. It also does not do first-order detrending,
+        which the Wierda paper discusses implementing.
+        """
+        if bounds is not None:
+            bounds = np.array(bounds)
+            if bounds.ndim != 1 or bounds.size != 2:
+                raise RuntimeError('bounds must be 2-element array or None')
+
+        # get the data (and make sure it exists)
+        pupil_data = self.pupil_zscores(baseline)
+
+        # set up parallel function (and check n_jobs)
+        parallel, p_fun, n_jobs = parallel_func(_do_deconv, n_jobs)
+
+        # figure out where the samples go
+        n_samp = self.n_times
+        if not isinstance(spacing, (np.ndarray, tuple, list)):
+            times = np.arange(self.times[0], self.times[-1], spacing)
+            times = np.unique(times)
+        else:
+            times = np.asanyarray(spacing)
+        samples = self.time_as_index(times)
+        if len(samples) == 0:
+            warnings.warn('No usable samples')
+            return np.array([]), np.array([])
+
+        # convert bounds to slsqp representation
+        if bounds is not None:
+            bounds = np.array([bounds for _ in range(len(samples))])
+        else:
+            bounds = []  # compatible with old version of scipy
+
+        # Build the convolution matrix
+        kernel = pupil_kernel(self.info['sfreq'])
+        conv_mat = np.zeros((n_samp, len(samples)))
+        for li, loc in enumerate(samples):
+            eidx = min(loc + len(kernel), n_samp)
+            conv_mat[loc:eidx, li] = kernel[:eidx-loc]
+
+        # do the fitting
+        fit_fails = parallel(p_fun(data, conv_mat, bounds, max_iter)
+                             for data in np.array_split(pupil_data, n_jobs))
+        fit = np.concatenate([f[0] for f in fit_fails])
+        fails = np.concatenate([f[1] for f in fit_fails])
+        if np.any(fails):
+            reasons = ', '.join(str(r) for r in
+                                np.setdiff1d(np.unique(fails), [0]))
+            warnings.warn('%i/%i fits did not converge (reasons: %s)'
+                          % (np.sum(fails != 0), len(fails), reasons))
+        return fit, times
+
+
+def _do_deconv(pupil_data, conv_mat, bounds, max_iter):
+    """Helper to parallelize deconvolution"""
+    x0 = np.ones(conv_mat.shape[1])
+    fit = np.empty((len(pupil_data), conv_mat.shape[1]))
+    failed = np.empty(len(pupil_data))
+    for di, data in enumerate(pupil_data):
+        out = fmin_slsqp(_score, x0, args=(data, conv_mat), epsilon=1e-3,
+                         bounds=bounds, disp=False, full_output=True,
+                         iter=max_iter, acc=1e-6)
+        fit[di, :] = out[0]
+        failed[di] = out[3]
+    return fit, failed
+
+
+def _score(vals, x_0, conv_mat):
+    return np.mean((x_0 - conv_mat.dot(vals)) ** 2)
 
 
 def _get_drop_indices(event_times, method):
