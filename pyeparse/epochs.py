@@ -92,7 +92,7 @@ class Epochs(object):
         self.events = _events
 
         # Need to add offsets to our epoch indices
-        for _samp, offset in zip(_samples, offsets):
+        for _samp, offset in zip(_samples, offsets{:-1]):
             for _s in _samp:
                 _s.loc[:, 'epoch_idx'] += offset
 
