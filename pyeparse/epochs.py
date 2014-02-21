@@ -7,6 +7,7 @@ import copy
 import numpy as np
 from scipy.optimize import fmin_slsqp
 import warnings
+import traceback
 
 from .event import Discrete
 from .viz import plot_epochs
@@ -82,19 +83,18 @@ class Epochs(object):
                 for rr, ee in zip(raw, events)]
 
         _samples, _discretes, _events = zip(*outs)
-        offset = np.cumsum(np.concatenate(([0], [r.n_samples for r in raw])))
-        for ev, off in zip(_events, offset[:-1]):
+        offsets = np.cumsum(np.concatenate(([0], [r.n_samples for r in raw])))
+        for ev, off in zip(_events, offsets[:-1]):
             ev[:, 0] += off
+        # Calculate offsets for epoch indices
+        offsets = np.cumsum(np.concatenate(([0], [len(e) for e in _events])))
         _events = np.concatenate(_events)
         self.events = _events
 
         # Need to add offsets to our epoch indices
-        offset = 0
-        for si, _samp in enumerate(_samples):
-            use_offset = offset
+        for _samp, offset in zip(_samples, offsets):
             for _s in _samp:
-                _s.loc[:, 'epoch_idx'] += use_offset
-                offset += len(_s.epoch_idx.unique())
+                _s.loc[:, 'epoch_idx'] += offset
 
         # flattening is important, otherwise concatenation fails,
         # the zip returns a somewhat nested structure ...
@@ -108,8 +108,14 @@ class Epochs(object):
         self._data = _data
         assert len(_data) == len(self) * len(self.times)
         self._data['times'] = np.tile(self.times, len(self))
-        self._data.set_index(['epoch_idx', 'times'], drop=True,
-                             inplace=True, verify_integrity=True)
+        try:
+            self._data.set_index(['epoch_idx', 'times'], drop=True,
+                                 inplace=True, verify_integrity=True)
+        except:
+            msg = traceback.format_exc()
+            if len(msg) > 1000:
+                msg = msg[:1000] + ' ...'
+            raise RuntimeError('Could not set indices: %s' % msg)
         assert len(self) == self._data.index.values.max()[0] + 1
 
         # deal with discretes
@@ -129,6 +135,7 @@ class Epochs(object):
         keep_idx = []
         # prevent the evil
         events = events[events[:, 0].argsort()]
+        count = 0
         for ii, (event, this_id) in enumerate(events):
             if this_id not in my_event_id:
                 continue
@@ -141,15 +148,16 @@ class Epochs(object):
                 continue
             inds = np.arange(inds_min, inds_max)
 
-            sample_inds[this_id].append([inds, ii])
+            sample_inds[this_id].append([inds, count])
             for kind, parsed in zip(raw.info['event_types'], discrete_inds):
                 df = raw.discrete.get(kind, kind)
                 assert(set([a <= b for a, b in
                        df[['stime', 'etime']].values]) == set([True]))
                 event_in_window = np.where((df['stime'] >= this_tmin) &
                                            (df['etime'] <= this_tmax))
-                parsed.append([event_in_window[0], ii, this_id, this_time])
+                parsed.append([event_in_window[0], count, this_id, this_time])
             keep_idx.append(ii)
+            count += 1
         events = events[keep_idx]
 
         discretes = dict()
