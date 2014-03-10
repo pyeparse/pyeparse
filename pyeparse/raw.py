@@ -8,7 +8,7 @@ from datetime import datetime
 try:
     from cStringIO import StringIO as sio
 except ImportError:  # py3 has renamed this
-    from io import StringIO as sio
+    from io import StringIO as sio  # noqa
 
 from .constants import EDF
 from .event import find_events
@@ -24,13 +24,20 @@ def _assemble_data(lines, columns, sep='[ \t]+', na_values=['.']):
 
 def _assemble_messages(lines):
     """Aux function for dealing with messages (sheesh)"""
-    messages = list()
+    msgs = list()
+    times = list()
     for line in lines:
         line = line.strip().split(None, 2)
         assert line[0] == 'MSG'
-        messages.append(line[1:3])
-    return pd.DataFrame(messages, columns=EDF.MESSAGE_FIELDS,
-                        dtype=(np.float64, 'O'))
+        times.append(float(line[1]))
+        msgs.append(line[2])
+    times = np.array(times)
+    msgs = np.array(msgs, dtype='O')
+    assert len(EDF.MESSAGE_FIELDS) == 2
+    data_dict = {}
+    for key, val in zip(EDF.MESSAGE_FIELDS, [times, msgs]):
+        data_dict[key] = val
+    return pd.DataFrame(data_dict, columns=EDF.MESSAGE_FIELDS)
 
 
 def _extract_sys_info(line):
