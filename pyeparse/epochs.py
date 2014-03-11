@@ -43,28 +43,31 @@ class Epochs(object):
     """
     def __init__(self, raw, events, event_id, tmin, tmax,
                  ignore_missing=False):
+        if np.isscalar(event_id):
+            if event_id != int(event_id):
+                raise RuntimeError('event_id must be an integer')
+            event_id = int(event_id)
+            event_id = {str(event_id): event_id}
+        if not isinstance(event_id, dict):
+            raise RuntimeError('event_id must be an int or dict')
         self.event_id = copy.deepcopy(event_id)
         self.tmin = tmin
         self.tmax = tmax
         self._current = 0
-        event_keys = None
         if not isinstance(raw, list):
             raw = [raw]
         if not isinstance(events, list):
             events = [events]
         if len(raw) != len(events):
             raise ValueError('raw and events must match')
-        if isinstance(event_id, dict):
-            event_keys = dict()
-            my_event_id = event_id.values()
-            for k, v in event_id.items():
-                if (not ignore_missing and
-                        v not in np.concatenate(events)[:, 1]):
-                    warnings.warn('Did not find event id %i' % v,
-                                  RuntimeWarning)
-                event_keys[v] = k
-        elif np.isscalar(event_id):
-            my_event_id = [event_id]
+        event_keys = dict()
+        my_event_id = event_id.values()
+        for k, v in event_id.items():
+            if (not ignore_missing and
+                    v not in np.concatenate(events)[:, 1]):
+                warnings.warn('Did not find event id %i' % v,
+                              RuntimeWarning)
+            event_keys[v] = k
 
         assert len(raw) > 0
         # figure out parameters to use
