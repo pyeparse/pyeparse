@@ -3,7 +3,7 @@
 # License: BSD (3-clause)
 
 import numpy as np
-import pandas as pd
+import copy
 from datetime import datetime
 try:
     from cStringIO import StringIO as sio
@@ -16,32 +16,8 @@ from os import path as op
 
 from .constants import EDF
 from .event import find_events
-from .utils import check_line_index, safe_bool, next
+from .utils import next, string_types
 from .viz import plot_calibration, plot_heatmap_raw
-
-
-def _assemble_data(lines, columns, sep='[ \t]+', na_values=['.']):
-    """Aux function"""
-    return pd.read_table(sio(''.join(lines)), names=columns, sep=sep,
-                         na_values=na_values)
-
-
-def _assemble_messages(lines):
-    """Aux function for dealing with messages (sheesh)"""
-    msgs = list()
-    times = list()
-    for line in lines:
-        line = line.strip().split(None, 2)
-        assert line[0] == 'MSG'
-        times.append(float(line[1]))
-        msgs.append(line[2])
-    times = np.array(times)
-    msgs = np.array(msgs, dtype='O')
-    assert len(EDF.MESSAGE_FIELDS) == 2
-    data_dict = {}
-    for key, val in zip(EDF.MESSAGE_FIELDS, [times, msgs]):
-        data_dict[key] = val
-    return pd.DataFrame(data_dict, columns=EDF.MESSAGE_FIELDS)
 
 
 def _extract_sys_info(line):
@@ -194,37 +170,6 @@ def _parse_put_event_format(info, def_lines):
     info['discretes'] = []
 
 
-def _merge_run_data(run1, run2):
-    """Merge two runs -- use with reduce"""
-    if run1[2]['sfreq'] != run2[2]['sfreq']:
-        raise RuntimeError('Sample frequencies differ across runs')
-    if safe_bool(run1[0].columns != run2[0].columns):
-        raise RuntimeError('Sample columns differ across runs')
-    sfreq = run1[2]['sfreq']
-    offset = run1[0]['time'].values[-1] + (1. / sfreq)
-    run2[0]['time'] += offset
-    samples = pd.concat([run1[0], run2[0]], ignore_index=True)
-    diff = np.diff(samples.time.values)
-    diff = np.ma.masked_invalid(diff).astype(np.int64)
-    diff = np.unique(diff)
-    if len(diff) > 1:
-        raise RuntimeError('Could not concatenate runs')
-    discrete = {}
-    for ((kind1, data1), (kind2, data2)) in zip(run1[1].items(),
-                                                run2[1].items()):
-        if 'stime' in data2:
-            data2['stime'] += offset
-            data2['etime'] += offset
-        elif 'time' in data2:
-            data2['time'] += offset
-        discrete.update({kind1: pd.concat([data1, data2],
-                                          ignore_index=True)})
-    info = run1[2]  # let's keep it simple for the moment and assume
-                    # infos don't differ
-    info['calibration'] = [i['calibration'] for i in [run1[2], run2[2]]]
-    return [samples, discrete, info]
-
-
 def _convert_edf(fname):
     """Helper to convert EDF to ASC on the fly for conversion"""
     # Ideally we will eventually handle the binary files directly
@@ -273,7 +218,6 @@ class Raw(object):
                     if line[0].isdigit():
                         samples.append(line)
                     elif EDF.CODE_ESAC == line[:len(EDF.CODE_ESAC)]:
-                        # deal with old pandas version, add an index.
                         esacc.append(line)
                     elif EDF.CODE_EFIX == line[:len(EDF.CODE_EFIX)]:
                         efix.append(line)
@@ -344,13 +288,13 @@ class Raw(object):
 
             if run['calibs']:
                 validation = _parse_calibration(info, run['calibs'])
-                df = pd.DataFrame(validation, dtype=np.float64)
-                info['calibration'] = df
+                validation = np.array(validation)
+                info['calibration'] = validation
                 if 'sample_fields' not in info:
                     _parse_put_event_format(info, run['def_lines'])
-            samples = _assemble_data(run['samples'],
-                                     columns=info['sample_fields'])
-            del run['samples']
+            samples = run['samples']
+            samples = ''.join(samples)
+            samples = np.genfromtxt(sio(samples)).T
             discrete = {}
             kind_str = ['saccades', 'fixations', 'blinks']
             kind_list = [run['esacc'], run['efix'], run['eblink']]
@@ -358,11 +302,27 @@ class Raw(object):
                            info['fixation_fields'],
                            EDF.BLINK_FIELDS]
             for s, kind, cols in zip(kind_str, kind_list, column_list):
-                discrete[s] = _assemble_data(check_line_index(kind),
-                                             columns=cols)
-            discrete['messages'] = _assemble_messages(run['messages'])
+                d = np.genfromtxt(sio(''.join(kind)), dtype=None)
+                disc = dict()
+                for ii, key in enumerate(cols):
+                    disc[key] = d['f%s' % (ii + 1)]  # first field is junk
+                discrete[s] = disc
 
-            is_unique = len(samples['time'].unique()) == len(samples)
+            # parse messages
+            times = list()
+            msgs = list()
+            for message in run['messages']:
+                x = message.strip().split(None, 2)
+                assert x[0] == 'MSG'
+                times.append(x[1])
+                msgs.append(x[2])
+            discrete['messages'] = dict()
+            times = np.array(times, dtype=np.float64)
+            msgs = np.array(msgs, dtype='O')
+            for key, val in zip(EDF.MESSAGE_FIELDS, [times, msgs]):
+                discrete['messages'][key] = np.array(val)
+
+            is_unique = len(np.unique(samples[0])) == samples.shape[1]
             if not is_unique:
                 raise RuntimeError('The time stamp found has non-unique '
                                    'values. Please check your conversion '
@@ -370,23 +330,21 @@ class Raw(object):
                                    'float option.')
 
             # set t0 to 0 and scale to seconds
-            _t_zero = samples['time'][0]
-            samples['time'] -= _t_zero
-            samples['time'] /= 1e3
+            _t_zero = samples[0, 0]
+            samples[0] -= _t_zero
+            samples[0] /= 1e3
             discrete['messages']['time'] -= _t_zero
             discrete['messages']['time'] /= 1e3
             info['event_types'] = []
             for kind in ['saccades', 'fixations', 'blinks']:
                 df = discrete.get(kind, None)
                 if df is not None:
-                    df[['stime', 'etime']] -= _t_zero
-                    df[['stime', 'etime', 'dur']] /= 1e3
+                    for key in ('stime', 'etime'):
+                        df[key] = (df[key] - _t_zero) / 1e3  # convert to fl
+                    assert np.all(df['stime'] < df['etime'])
                     info['event_types'].append(kind)
             if ii < 1:
                 self._t_zero = _t_zero
-            df = samples
-            info['data_cols'] = [kk for kk, dt in zip(df.columns, df.dtypes)
-                                 if dt != 'O' and kk != 'time']
             info_runs.append(info)
             discrete_runs.append(discrete)
             samples_runs.append(samples)
@@ -394,30 +352,71 @@ class Raw(object):
         assert len(samples_runs) == len(discrete_runs) == len(info_runs)
         if len(samples_runs) == 1:
             self.info = info_runs[0]
-            self.samples = samples_runs[0]
             self.discrete = discrete_runs[0]
+            self._samples = samples_runs[0]
         else:
-            one_run = None
-            # instead of using "reduce"
-            for run in zip(samples_runs, discrete_runs, info_runs):
-                if one_run is None:
-                    one_run = run
-                else:
-                    one_run = _merge_run_data(one_run, run)
-            self.samples, self.discrete, self.info = one_run
+            fs = info_runs[0]['sfreq']
+            offsets = np.cumsum([0] + [s[0][-1] + 1. / fs
+                                       for s in samples_runs[:-1]])
+            for s, d, off in zip(samples_runs, discrete_runs, offsets):
+                s[0] += off
+                for kind in info['event_types']:
+                    d[kind]['stime'] += off
+                    d[kind]['etime'] += off
+            discrete = dict()
+            for kind in info['event_types']:
+                discrete[kind] = dict()
+                for col in d[kind].keys():
+                    concat = np.concatenate([d[kind][col]
+                                             for d in discrete_runs])
+                    discrete[kind][col] = concat
+            info = copy.deepcopy(info_runs[0])
+            info['calibration'] = copy.deepcopy([i['calibration']
+                                                 for i in info_runs])
+            self.info = info
+            self.discrete = discrete
+            self._samples = np.concatenate(samples_runs, axis=1)
+        assert self._samples.shape[0] == len(self.info['sample_fields'])
         self.info['fname'] = fname
 
     def __repr__(self):
-        return '<Raw | {0} samples>'.format(len(self.samples))
+        return '<Raw | {0} samples>'.format(self.n_samples)
 
     def __getitem__(self, idx):
-        df = self.samples
-        data = df[self.info['data_cols']].values[idx]
-        return np.atleast_2d(data), np.atleast_1d(df['time'].values[idx])
+        if isinstance(idx, string_types):
+            idx = (idx,)
+        elif isinstance(idx, slice):
+            idx = (idx,)
+        if not isinstance(idx, tuple):
+            raise TypeError('index must be a string, slice, or tuple')
+
+        if isinstance(idx[0], string_types):
+            if idx[0] not in self.info['sample_fields']:
+                raise KeyError('string idx "%s" must be one of %s'
+                               % (idx, self.info['sample_fields']))
+            idx = list(idx)
+            idx[0] = self.info['sample_fields'].index(idx[0])
+            idx = tuple(idx)
+        if len(idx) > 2:
+            raise ValueError('indices must have at most two elements')
+        elif len(idx) == 1:
+            idx = (idx[0], slice(None))
+
+        return self._samples[idx], self._samples[0][idx[1:]]
+
+    def _di(self, key):
+        """Helper to get the sample dict index"""
+        if key not in self.info['sample_fields']:
+            raise KeyError('key "%s" not in sample fields %s'
+                           % (key, self.info['sample_fields']))
+        return self.info['sample_fields'].index(key)
 
     @property
     def n_samples(self):
-        return len(self.samples)
+        return self._samples.shape[1]
+
+    def __len__(self):
+        return self.n_samples
 
     def plot_calibration(self, title='Calibration', show=True):
         """Visualize calibration
@@ -530,9 +529,9 @@ class Raw(object):
         borders = np.array(borders)
         if borders.size == 1:
             borders == np.array([borders, borders])
-        blinks = self.discrete['blinks']['stime'].values
-        starts = self.discrete['saccades']['stime'].values
-        ends = self.discrete['saccades']['etime'].values
+        blinks = self.discrete['blinks']['stime']
+        starts = self.discrete['saccades']['stime']
+        ends = self.discrete['saccades']['etime']
         # only use saccades that enclose a blink
         if use_only_blink:
             use = np.searchsorted(ends, blinks)
@@ -551,12 +550,13 @@ class Raw(object):
         assert len(starts) == len(ends)
         for stime, etime in zip(starts, ends):
             sidx, eidx = self.time_as_index([stime, etime])
-            vals = self.samples['ps'][sidx:eidx].values
+            vals = self['ps', sidx:eidx][0]
             if interp is None:
                 fix = np.nan
             elif interp == 'zoh':
-                fix = self.samples['ps'][sidx]
+                fix = self['ps'][sidx]
             elif interp == 'linear':
                 len_ = eidx - sidx
                 fix = np.linspace(vals[0], vals[-1], len_)
-            self.samples['ps'][sidx:eidx] = fix
+            print(type(self['ps', sidx:eidx]))
+            self['ps', sidx:eidx][0] = fix

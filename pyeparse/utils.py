@@ -3,7 +3,6 @@
 # License: BSD (3-clause)
 
 from distutils.version import LooseVersion
-import pandas as pd
 import numpy as np
 
 
@@ -26,29 +25,6 @@ except NameError:
     string_types = str
 
 
-def safe_bool(obj):
-    """ Map arbitrary objecty state to bool singletons
-    Parameters
-    ----------
-    obj : object
-        Any python object
-
-    Returns
-    -------
-    bool : bool
-        The bools singleton identical to the memory address of
-        `True` or `False`
-    """
-    f = lambda x: getattr(obj, x, None) is not None
-    if f('empty'):
-        ret = obj.empty is False
-    elif f('any'):
-        ret = obj.any()
-    else:
-        ret = obj
-    return bool(ret)
-
-
 def create_chunks(sequence, size):
     """Generate chunks from a sequence
 
@@ -64,7 +40,7 @@ def create_chunks(sequence, size):
     return (sequence[p:p + size] for p in range(0, len(sequence), size))
 
 
-def check_pandas_version(min_version):
+def check_pandas_version(min_version='0.0'):
     """ Check minimum Pandas version required
 
     Parameters
@@ -73,27 +49,17 @@ def check_pandas_version(min_version):
         The version string. Anything that matches
         ``'(\\d+ | [a-z]+ | \\.)'``
     """
+    min_version = LooseVersion(min_version)
+    try:
+        import pandas as pd
+    except:
+        return False
     is_good = False if LooseVersion(pd.__version__) < min_version else True
     return is_good
 
 
-def check_line_index(lines):
-    """Check whether lines are safe for parsing
-    Parameters
-    ----------
-    lines : list of str
-        A list of strings as returned from a file object
-    Returns
-    -------
-    lines : list of str
-        The edited list of strings in case the Pandas version
-        is not recent enough.
-
-    """
-    if check_pandas_version('0.8'):
-        return lines
-    else:   # 92mu -- fastest, please don't change
-        return [str(x) + ' ' + y for x, y in enumerate(lines)]
+requires_pandas = np.testing.dec.skipif(not check_pandas_version(),
+                                        'Requires Pandas')
 
 
 def fwhm_kernel_2d(size, fwhm, center=None):

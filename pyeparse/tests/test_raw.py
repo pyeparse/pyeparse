@@ -5,7 +5,6 @@ from os import path as op
 from nose.tools import assert_true, assert_equal
 
 from pyeparse import Raw
-from pyeparse.constants import EDF, dtype_dict
 
 warnings.simplefilter('always')  # in case we hit warnings
 
@@ -21,30 +20,14 @@ def test_raw_io():
         print(raw)  # test repr works
 
         # tests dtypes are parsed correctly that is double only
-        dtypes = raw.samples.dtypes[:-1].unique()
-        assert_equal(len(dtypes), 1)
-        assert_equal(dtypes[0], np.float64)
-        assert_equal(raw.samples['status'].dtype, np.object)
-
-        saccade_dtypes = [dtype_dict[x] for x in raw.info['saccade_fields']]
-        fixation_dtypes = [dtype_dict[x] for x in raw.info['fixation_fields']]
-        blink_dtypes = [dtype_dict[x] for x in EDF.BLINK_FIELDS]
-        message_dtypes = [dtype_dict[x] for x in EDF.MESSAGE_FIELDS]
-        for kind, values in raw.discrete.items():
-            columns = {'saccades': saccade_dtypes,
-                       'fixations': fixation_dtypes,
-                       'blinks': blink_dtypes,
-                       'messages': message_dtypes}[kind]
-            assert_equal(len(values.dtypes), len(columns))
-            for name, actual, desired in zip(values.columns,
-                                             values.dtypes, columns):
-                assert_equal(actual, np.dtype(desired))
+        assert_equal(raw._samples.dtype, np.float64)
 
         if fi == 0:  # First test file has this property
             for kind in ['saccades', 'fixations', 'blinks']:
                 # relax, depends on data
+                print raw.discrete[kind].keys()
                 assert_true(raw.discrete[kind]['stime'][0] < 5.0)
-        assert_true(raw.samples['time'][0] < 1.0)
+        assert_true(raw['time'][0] < 1.0)
         for interp in [None, 'zoh', 'linear']:
             raw.remove_blink_artifacts(interp)
 
@@ -54,7 +37,7 @@ def test_access_data():
     for fname in fnames:
         raw = Raw(fname)
         for idx in [1, [1, 3], slice(50)]:
-            data, times = raw[idx]
+            data, times = raw[:, idx]
             assert_equal(len(data), len(times))
 
         # test for monotonous continuity

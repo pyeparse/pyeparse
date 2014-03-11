@@ -2,12 +2,10 @@
 #
 # License: BSD (3-clause)
 
-import pandas as pd
 import copy
 import numpy as np
 from scipy.optimize import fmin_slsqp
 import warnings
-import traceback
 
 from .event import Discrete
 from .viz import plot_epochs
@@ -76,7 +74,7 @@ class Epochs(object):
         self._n_times = n_samples
         self.times = np.linspace(self.tmin, self.tmax, self._n_times)
         self.info = dict(sfreq=raw[0].info['sfreq'],
-                         data_cols=raw[0].info['data_cols'])
+                         data_cols=raw[0].info['sample_fields'])
         for r in raw[1:]:
             if r.info['sfreq'] != raw[0].info['sfreq']:
                 raise RuntimeError('incompatible raw files')
@@ -86,127 +84,73 @@ class Epochs(object):
                 for rr, ee in zip(raw, events)]
 
         _samples, _discretes, _events = zip(*outs)
-        offsets = np.cumsum(np.concatenate(([0], [r.n_samples for r in raw])))
-        for ev, off in zip(_events, offsets[:-1]):
+        t_off = np.cumsum(np.concatenate(([0], [r.n_samples for r in raw])))
+        t_off = t_off[:-1]
+        for ev, off in zip(_events, t_off):
             ev[:, 0] += off
         # Calculate offsets for epoch indices
-        offsets = np.cumsum(np.concatenate(([0], [len(e) for e in _events])))
+        e_off = np.cumsum(np.concatenate(([0], [len(e) for e in _events])))
         _events = np.concatenate(_events)
         self.events = _events
 
+        self._data = np.empty((len(self.info['data_cols']),
+                               e_off[-1], self.n_times))
         # Need to add offsets to our epoch indices
-        for _samp, offset in zip(_samples, offsets[:-1]):
-            for _s in _samp:
-                _s.loc[:, 'epoch_idx'] += offset
-        # XXX TODO: Make sure epoch_idx's == np.arange(len(events))
-
-        # flattening is important, otherwise concatenation fails,
-        # the zip returns a somewhat nested structure ...
-        _flatten = lambda x: [ii for i in x for ii in i]
-        _samples = _flatten(_samples)
-
-        # ignore index to allow for sorting + keep unique values
-        _data = pd.concat(_samples, ignore_index=True)
-        # important for multiple conditions
-        _data = _data.sort(['epoch_idx', 'time'])
-        self._data = _data
-        assert len(_data) == len(self) * len(self.times)
-        self._data['times'] = np.tile(self.times, len(self))
-        try:
-            self._data.set_index(['epoch_idx', 'times'], drop=True,
-                                 inplace=True, verify_integrity=True)
-        except:
-            msg = traceback.format_exc()
-            if len(msg) > 1000:
-                msg = msg[:1000] + ' ...'
-            raise RuntimeError('Could not set indices: %s' % msg)
-        assert len(self) == self._data.index.values.max()[0] + 1
+        for _samp, e1, e2, t in zip(_samples, e_off[:-1], e_off[1:], t_off):
+            self._data[0, e1:e2] = _samp[0] + t
+            self._data[1:, e1:e2] = _samp[1:]
 
         # deal with discretes
         for kind in discrete_types:
             this_discrete = Discrete()
             for d in _discretes:
                 this_discrete.extend(d[kind])
+            assert len(this_discrete) == len(self.events)
             setattr(self, kind, this_discrete)
         self.info['discretes'] = discrete_types
 
     def _process_raw_events(self, raw, events, my_event_id, event_keys,
                             idx_offsets):
-        data, times = raw[:]
-        discrete_inds = [[] for _ in range(3)]
-        sample_inds = dict((k, []) for k in my_event_id)
-        saccade_inds, fixation_inds, blink_inds = discrete_inds
+        data, times = raw._samples[1:], raw._samples[0]
+        sample_inds = []
         keep_idx = []
         # prevent the evil
         events = events[events[:, 0].argsort()]
-        count = 0
+        discretes = dict()
+        for kind in raw.info['event_types']:
+            discretes[kind] = Discrete()
         for ii, (event, this_id) in enumerate(events):
             if this_id not in my_event_id:
                 continue
             this_time = times[event]
             this_tmin, this_tmax = this_time + self.tmin, this_time + self.tmax
             inds_min, inds_max = raw.time_as_index(this_time)[0] + idx_offsets
-            if max([inds_min, inds_max]) >= len(raw.samples):
+            if max([inds_min, inds_max]) >= len(raw):
                 continue
             if min([inds_min, inds_max]) < 0:
                 continue
             inds = np.arange(inds_min, inds_max)
-
-            sample_inds[this_id].append([inds, count])
-            for kind, parsed in zip(raw.info['event_types'], discrete_inds):
-                df = raw.discrete.get(kind, kind)
-                assert(set([a <= b for a, b in
-                       df[['stime', 'etime']].values]) == set([True]))
-                event_in_window = np.where((df['stime'] >= this_tmin) &
-                                           (df['etime'] <= this_tmax))
-                parsed.append([event_in_window[0], count, this_id, this_time])
+            sample_inds.append(inds)
             keep_idx.append(ii)
-            count += 1
+
+            for kind in raw.info['event_types']:
+                this_disc = discretes[kind]
+                df = raw.discrete[kind]
+                idx = np.where((df['stime'] >= this_tmin) &
+                               (df['etime'] <= this_tmax))
+                for ii in idx:
+                    subdict = dict()
+                    for key in df.keys():
+                        subdict[key] = df[key][idx].copy()
+                    subdict['stime'] -= this_time
+                    subdict['etime'] -= this_time
+                    this_disc.append(subdict)
         events = events[keep_idx]
-
-        discretes = dict()
-        for kind, parsed in zip(discrete_types, discrete_inds):
-            this_in = raw.discrete.get(kind, None)
-            this_discrete = Discrete()
-            discretes[kind] = this_discrete
-            if this_in is not None:
-                for inds, epochs_idx, this_id, this_time in parsed:
-                    this_id = (this_id if event_keys is None else
-                               event_keys[this_id])
-                    if inds.any().any():
-                        # explicitly copy to avoid annoying warnings
-                        df = this_in.ix[inds].copy()
-                        df['event_id'] = this_id
-                        df.loc[:, 'stime'] -= this_time
-                        df.loc[:, 'etime'] -= this_time
-                        this_discrete.append(df)
-                    else:
-                        this_discrete.append([])
-
-        _samples = []
-        c = np.concatenate
-        track_inds = []
-        for this_id, values in sample_inds.items():
-            if len(values) > 0:
-                ind, _ = zip(*values)
-                ind = [i[:self._n_times] for i in ind]
-                cind = c(ind)
-                count = c([np.repeat(vv, self._n_times) for _, vv in values])
-            else:
-                ind = list()
-                cind = np.array([], dtype=int)
-                count = list()
-            df = raw.samples.ix[cind]
-            this_id = this_id if event_keys is None else event_keys[this_id]
-            df['event_id'] = this_id
-            df['epoch_idx'] = count
-            _samples.append(df.copy())  # explicitly copy so no warn later
-            track_inds.extend([len(i) for i in ind])
-
-        assert set(track_inds) == set([self._n_times])
-        n_keep = sum([len(s.epoch_idx.unique()) for s in _samples])
-        assert len(events) == n_keep
-        return _samples, discretes, events
+        sample_inds = np.array(sample_inds)
+        samples = raw._samples[:, sample_inds]
+        for kind in raw.info['event_types']:
+            assert len(discretes[kind]) == len(events)
+        return samples, discretes, events
 
     def __len__(self):
         return len(self.events)
@@ -237,17 +181,15 @@ class Epochs(object):
     def __next__(self, *args, **kwargs):
         return self.next(*args, **kwargs)
 
-    @property
-    def data(self):
-        out = self._data[self.info['data_cols']].values
-        out = out.reshape(len(self),
-                          len(self.times),
-                          len(self.info['data_cols']))
-        return np.transpose(out, [0, 2, 1])
+    def data(self, kind):
+        if kind not in self.info['data_cols']:
+            raise ValueError('kind "%s" must be one of %s'
+                             % (kind, self.info['data_cols']))
+        return self._data[self.info['data_cols'].index(kind)]
 
     @property
     def data_frame(self):
-        return self._data
+        raise NotImplementedError
 
     @property
     def ch_names(self):
@@ -264,24 +206,12 @@ class Epochs(object):
                 raise ValueError('ID not found')
             idx = self.event_id[idx]
             idx = np.where(self.events[:, -1] == idx)[0]
-        elif (isinstance(idx, list) and isinstance(idx[0],
-              string_types)):
-            idx_list = []
-            for ii in idx:
-                ii = self.event_id[ii]
-                idx_list.append(np.where(self.events[:, -1] == ii)[0])
-            idx = np.concatenate(idx_list)
-        elif np.isscalar(idx):
-            idx = [idx]
-        elif isinstance(idx, slice):
-            idx = np.arange(*idx.indices(idx.stop))
-        # XXX inquire whether Index.map works across pandas versions (fast)
-        idx = np.sort(idx)
-        midx = [i for i in out._data.index if i[0] in idx]  # ... slow
-        out._data = out._data.ix[midx]
+        else:
+            idx = np.sort(np.atleast_1d(idx))
+        out._data = out._data[:, idx]
         out.events = out.events[idx]
         for discrete in self.info['discretes']:
-            disc = vars(self)[discrete]
+            disc = getattr(self, discrete)
             setattr(out, discrete, Discrete(disc[k] for k in idx))
         return out
 

@@ -6,7 +6,7 @@ import numpy as np
 import math
 from collections import deque
 from functools import partial
-from .utils import create_chunks, safe_bool, fwhm_kernel_2d, string_types
+from .utils import create_chunks, fwhm_kernel_2d, string_types
 
 
 def plot_calibration(raw, title='Calibration', show=True):
@@ -224,7 +224,7 @@ def _draw_epochs_axes(epoch_idx, data, times, axes,
         else:
             color = 'orange'
         if discretes is not None:
-            if safe_bool(discretes[ii]):
+            if discretes[ii] is not None:
                 for here in discretes[ii]:
                     ax.axvline(here, color=color, linestyle='--')
                     n_disc_lines += 1
@@ -416,7 +416,7 @@ def plot_epochs(epochs, epoch_idx=None, picks=None, n_chunks=20,
             key[k.strip('_')] = k
         key = key[draw_discrete]
         discretes = [d['stime'].values * 1e3 for d in vars(epochs)[key]
-                     if safe_bool(d)]
+                     if d is not None]
     elif draw_discrete is None:
         discretes = None
     else:
@@ -433,7 +433,7 @@ def plot_epochs(epochs, epoch_idx=None, picks=None, n_chunks=20,
         else:
             color = 'orange'
         if discretes is not None:
-            if safe_bool(discretes[ii]):
+            if discretes[ii] is not None:
                 for here in discretes[ii]:
                     ax.axvline(here, color=color, linestyle='--')
                     n_disc_lines += 1

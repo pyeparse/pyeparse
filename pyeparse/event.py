@@ -4,7 +4,7 @@
 
 import re
 import numpy as np
-from .utils import safe_bool, string_types
+from .utils import string_types
 
 
 class Discrete(list):
@@ -16,7 +16,7 @@ class Discrete(list):
 
     def __repr__(self):
         s = '<Discrete | {0} epochs; {1} events>'
-        return s.format(len(self), sum(len(d) for d in self if safe_bool(d)))
+        return s.format(len(self), sum(len(d) for d in self if d is not None))
 
 
 def find_events(raw, pattern, event_id):
@@ -38,15 +38,15 @@ def find_events(raw, pattern, event_id):
         The indices found.
     """
     df = raw.discrete.get('messages', None)
-    if safe_bool(df):
+    if df is not None:
         if callable(pattern):
             func = pattern
         elif isinstance(pattern, string_types):
             func = lambda x: pattern in x
         else:
             raise ValueError('Pattern not valid. Pass string or function')
-        my_bool = df.msg.map(func)
-        out = raw.time_as_index(df['time'].ix[my_bool.nonzero()[0]])
+        idx = np.array([func(msg) for msg in df['msg']])
+        out = raw.time_as_index(df['time'][idx])
         id_vector = np.repeat(event_id, len(out)).astype(np.int64)
         return np.c_[out, id_vector]
 
