@@ -9,6 +9,10 @@ try:
     from cStringIO import StringIO as sio
 except ImportError:  # py3 has renamed this
     from io import StringIO as sio  # noqa
+import tempfile
+import subprocess
+import shutil
+from os import path as op
 
 from .constants import EDF
 from .event import find_events
@@ -221,6 +225,20 @@ def _merge_run_data(run1, run2):
     return [samples, discrete, info]
 
 
+def _convert_edf(fname):
+    """Helper to convert EDF to ASC on the fly for conversion"""
+    # Ideally we will eventually handle the binary files directly
+    out_dir = tempfile.mkdtemp('edf2asc')
+    out_fname = op.join(out_dir, 'temp.asc')
+    p = subprocess.Popen(['edf2asc', fname, out_fname], stderr=subprocess.PIPE,
+                         stdout=subprocess.PIPE)
+    stdout_, stderr = p.communicate()
+    if p.returncode != 255:
+        print((p.returncode, stdout_, stderr))
+        raise RuntimeError('Could not convert EDF to ASC')
+    return out_fname, out_dir
+
+
 class Raw(object):
     """ Represent EyeLink 1000 ASCII files in Python
 
@@ -235,6 +253,11 @@ class Raw(object):
             messages = [list() for _ in range(8)]
         started = False
         runs = []
+        if not op.isfile(fname):
+            raise IOError('file "%s" not found' % fname)
+        del_dir = None
+        if fname.endswith('.edf'):
+            fname, del_dir = _convert_edf(fname)
         with open(fname, 'r') as fid:
             for line in fid:
                 if line[0] in ['#/;']:  # comment line, ignore it
@@ -294,6 +317,8 @@ class Raw(object):
                     else:
                         raise RuntimeError('data not understood: "%s"'
                                            % line)
+        if del_dir is not None:
+            shutil.rmtree(del_dir)  # to remove temporary conversion files
         runs.append(dict(def_lines=def_lines, samples=samples,
                          esacc=esacc, efix=efix, eblink=eblink,
                          calibs=calibs, preamble=preamble,
