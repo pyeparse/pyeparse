@@ -181,7 +181,23 @@ class Epochs(object):
     def __next__(self, *args, **kwargs):
         return self.next(*args, **kwargs)
 
-    def data(self, kind):
+    @property
+    def data(self):
+        return self._data
+
+    def get_data(self, kind):
+        """Get data of a particular kind
+
+        Parameters
+        ----------
+        kind : str
+            Kind of data go obtain. Must be one of ``self.info['data_cols']``.
+
+        Returns
+        -------
+        data : array
+            Array of data, n_epochs x n_times.
+        """
         if kind not in self.info['data_cols']:
             raise ValueError('kind "%s" must be one of %s'
                              % (kind, self.info['data_cols']))
@@ -356,17 +372,10 @@ class Epochs(object):
 
         old_idx = np.delete(np.arange(len(self)), indices)
         self.events = np.delete(self.events, indices, axis=0)
-        self._data = self._data.drop(indices, level=0)
-        new_idx = np.arange(len(self))
-        assert len(old_idx) == len(new_idx)
-        rename_dict = dict()
-        for o, n in zip(old_idx, new_idx):
-            rename_dict[o] = n
-        old_idx_check = np.unique(self._data.index.labels[0])
-        assert np.array_equal(old_idx, old_idx_check)
-        self._data = self._data.rename(index=rename_dict)
-        new_idx_check = np.unique(self._data.index.labels[0])
-        assert np.array_equal(new_idx, new_idx_check)
+        self._data = np.delete(self._data, indices, axis=1)
+        for key in self.info['discretes']:
+            val = getattr(self, key)
+            setattr(self, key, [val[ii] for ii in old_idx])
 
     def equalize_event_counts(self, event_ids, method='mintime'):
         """Equalize the number of trials in each condition
@@ -440,8 +449,7 @@ class Epochs(object):
         if baseline[1] is None:
             baseline[1] = self.times[-1]
         baseline = self.time_as_index(baseline)
-        zs = self._data['ps'].values.reshape(len(self.events),
-                                             len(self.times))
+        zs = self.get_data('ps')
         std = np.nanstd(zs.flat)
         bl = np.nanmean(zs[:, baseline[0]:baseline[1] + 1], axis=1)
         zs -= bl[:, np.newaxis]
