@@ -27,7 +27,7 @@ def test_raw_io():
                 # relax, depends on data
                 print raw.discrete[kind].keys()
                 assert_true(raw.discrete[kind]['stime'][0] < 5.0)
-        assert_true(raw['time'][0] < 1.0)
+        assert_true(raw['time'][0][0] < 1.0)
         for interp in [None, 'zoh', 'linear']:
             raw.remove_blink_artifacts(interp)
 
@@ -36,11 +36,14 @@ def test_access_data():
     """Test raw slicing and indexing"""
     for fname in fnames:
         raw = Raw(fname)
-        for idx in [1, [1, 3], slice(50)]:
+        for idx in [[1, 3], slice(50)]:
             data, times = raw[:, idx]
-            assert_equal(len(data), len(times))
+            assert_equal(data.shape[1], len(times))
+        data, times = raw[:, 1]
+        assert_equal(data.ndim, 1)
+        assert_equal(np.atleast_1d(times).size, 1)
 
         # test for monotonous continuity
-        deltas = np.diff(times)
+        deltas = np.diff(raw.times)
         assert_allclose(deltas, deltas[0] * np.ones_like(deltas))
         assert_allclose(deltas[0], 0.001)

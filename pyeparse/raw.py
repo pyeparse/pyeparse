@@ -401,8 +401,9 @@ class Raw(object):
             raise ValueError('indices must have at most two elements')
         elif len(idx) == 1:
             idx = (idx[0], slice(None))
-
-        return self._samples[idx], self._samples[0][idx[1:]]
+        data = self._samples[idx]
+        times = self._samples[0][idx[1:]]
+        return data, times
 
     def _di(self, key):
         """Helper to get the sample dict index"""
@@ -459,6 +460,10 @@ class Raw(object):
         plot_heatmap_raw(raw=self, start=start, stop=stop, cmap=cmap,
                          title=title, kernel=kernel, colorbar=colorbar,
                          show=show)
+
+    @property
+    def times(self):
+        return self._samples[0].copy()
 
     def time_as_index(self, times):
         """Convert time to indices
@@ -554,9 +559,8 @@ class Raw(object):
             if interp is None:
                 fix = np.nan
             elif interp == 'zoh':
-                fix = self['ps'][sidx]
+                fix = vals[0]
             elif interp == 'linear':
                 len_ = eidx - sidx
                 fix = np.linspace(vals[0], vals[-1], len_)
-            print(type(self['ps', sidx:eidx]))
-            self['ps', sidx:eidx][0] = fix
+            vals[:] = fix
