@@ -3,6 +3,7 @@
 # License: BSD (3-clause)
 
 import numpy as np
+import pandas as pd
 from datetime import datetime
 try:
     from cStringIO import StringIO as sio
@@ -190,18 +191,10 @@ def _convert_edf(fname):
     return out_fname, out_dir
 
 
-class Raw(object):
-    """ Represent EyeLink 1000 ASCII files in Python
-
-    Parameters
-    ----------
-    fname : str
-        The name of the ASCII converted EDF file.
-    """
-    def __init__(self, fname):
-
-        def_lines, samples, esacc, efix, eblink, calibs, preamble, \
-            messages = [list() for _ in range(8)]
+def _read_raw(fname):
+        def_lines, esacc, efix, eblink, calibs, preamble, messages = \
+            [list() for _ in range(7)]
+        samples = []
         started = False
         event_types = ['saccades', 'fixations', 'blinks']
         runs = []
@@ -219,20 +212,18 @@ class Raw(object):
                         preamble.append(line)
                     else:
                         started = True
-                        continue  # don't parse empty  line
-
-                if started:
+                else:
                     if line[0].isdigit():
                         samples.append(line)
-                    elif EDF.CODE_ESAC == line[:len(EDF.CODE_ESAC)]:
+                    elif line.startswith(EDF.CODE_ESAC):
                         esacc.append(line)
-                    elif EDF.CODE_EFIX == line[:len(EDF.CODE_EFIX)]:
+                    elif line.startswith(EDF.CODE_EFIX):
                         efix.append(line)
-                    elif EDF.CODE_EBLINK in line[:len(EDF.CODE_EBLINK)]:
+                    elif line.startswith(EDF.CODE_EBLINK):
                         eblink.append(line)
-                    elif 'MSG' == line[:3]:
+                    elif line.startswith('MSG'):
                         messages.append(line)
-                    elif 'CALIBRATION' in line and line.startswith('>'):
+                    elif line.startswith('>') and 'CALIBRATION' in line:
                         # Add another calibration section, set split for
                         # raw parser
                         if samples:
@@ -242,9 +233,9 @@ class Raw(object):
                                              eblink=eblink,
                                              calibs=calibs, preamble=preamble,
                                              messages=messages))
-                            def_lines, samples, esacc, efix, eblink, calibs, \
-                                preamble, \
-                                messages = [list() for _ in range(8)]
+                            def_lines, esacc, efix, eblink, calibs, preamble, \
+                                messages = [list() for _ in range(7)]
+                            samples = []
                         calib_lines = []
                         while True:
                             subline = next(fid)
@@ -261,9 +252,9 @@ class Raw(object):
                         pass
                     elif EDF.CODE_SBLINK == line[:len(EDF.CODE_SBLINK)]:
                         pass
-                    elif 'END' == line[:3]:
+                    elif line.startswith('END'):
                         pass
-                    elif 'INPUT' == line[:5]:
+                    elif line.startswith('INPUT'):
                         pass
                     else:
                         raise RuntimeError('data not understood: "%s"'
@@ -286,7 +277,7 @@ class Raw(object):
         discrete = dict()
         fs = None
         info = None
-        self._t_zero = None
+        _t_zero = None
         offset = 0
         assert len(runs) > 0
         for ii, run in enumerate(runs):
@@ -312,11 +303,13 @@ class Raw(object):
             assert fs == this_info['sfreq']
             samples = run['samples']
             samples = ''.join(samples)
-            samples = np.genfromtxt(sio(samples)).T
+            samples = pd.read_table(sio(samples), sep='[ \t]+',
+                                    na_values=['.', '...'])
+            samples = samples.values.T.copy()
             assert len(np.unique(samples[0])) == samples.shape[1]
             this_t_zero = samples[0, 0]
-            if self._t_zero is None:
-                self._t_zero = this_t_zero
+            if _t_zero is None:
+                _t_zero = this_t_zero
             samples[0] -= this_t_zero
             samples[0] /= 1e3
             samples += offset
@@ -358,10 +351,24 @@ class Raw(object):
                 concat = np.concatenate([d[kind][col]
                                          for d in discrete_runs])
                 discrete[kind][col] = concat
+        samples = np.concatenate(samples_runs, axis=1)
+        return info, discrete, samples, _t_zero
 
+
+class Raw(object):
+    """ Represent EyeLink 1000 ASCII files in Python
+
+    Parameters
+    ----------
+    fname : str
+        The name of the ASCII converted EDF file.
+    """
+    def __init__(self, fname):
+        info, discrete, samples, t_zero = _read_raw(fname)
         self.info = info
         self.discrete = discrete
-        self._samples = np.concatenate(samples_runs, axis=1)
+        self._samples = samples
+        self._t_zero = t_zero
         assert self._samples.shape[0] == len(self.info['sample_fields'])
         self.info['fname'] = fname
 
