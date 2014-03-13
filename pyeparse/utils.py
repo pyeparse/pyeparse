@@ -6,7 +6,7 @@ import numpy as np
 from os import path as op
 import shutil
 import tempfile
-import subprocess
+from subprocess import Popen, PIPE
 
 from ._py23 import string_types
 
@@ -72,9 +72,7 @@ class raw_open(object):
             # Ideally we will eventually handle the binary files directly
             out_dir = tempfile.mkdtemp('edf2asc')
             out_fname = op.join(out_dir, 'temp.asc')
-            p = subprocess.Popen(['edf2asc', fname, out_fname],
-                                 stderr=subprocess.PIPE,
-                                 stdout=subprocess.PIPE)
+            p = Popen(['edf2asc', fname, out_fname], stderr=PIPE, stdout=PIPE)
             stdout_, stderr = p.communicate()
             if p.returncode != 255:
                 print((p.returncode, stdout_, stderr))
@@ -98,9 +96,7 @@ class raw_open(object):
 def _has_edf2asc():
     """See if the user has edf2asc"""
     try:
-        subprocess.Popen(['edf2asc', '--help'],
-                         stderr=subprocess.PIPE,
-                         stdout=subprocess.PIPE)
+        Popen(['edf2asc', '--help'], stderr=PIPE, stdout=PIPE).communicate()
     except Exception:
         out = False
     else:

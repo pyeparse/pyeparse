@@ -11,26 +11,26 @@ env:
     - PYTHON=2.6 DEPS=full
     - PYTHON=2.7 DEPS=full  # note: this runs python-pandas (old version)
     - PYTHON=3.3 DEPS=full
-    - PYTHON=2.7 DEPS=minimal  # edf2asc and pandas optional
+    - PYTHON=3.3 DEPS=minimal  # edf2asc and pandas optional
+    - PYTHON=2.7 DEPS=minimal
 
 before_install:
+    - travis_retry sudo apt-get -qq update;
     - if [ "${PYTHON}" != "2.7" ]; then
         wget http://repo.continuum.io/miniconda/Miniconda-2.2.2-Linux-x86_64.sh -O miniconda.sh;
         chmod +x miniconda.sh;
         ./miniconda.sh -b;
         export PATH=/home/$USER/anaconda/bin:$PATH;
         conda update --yes conda;
-      else
-        travis_retry sudo apt-get -qq update;
       fi;
 
 install:
-    - if [ "${PYTHON}" != "2.7" ]; then
+    - if [ "${PYTHON}" == "2.7" ]; then
+        travis_retry sudo apt-get -qq install python-scipy python-nose python-matplotlib;
+      else
         conda create -n testenv --yes --quiet pip python=$PYTHON;
         source activate testenv;
         conda install --yes --quiet scipy nose matplotlib;
-      else
-        travis_retry sudo apt-get -qq install python-scipy python-nose python-matplotlib;
       fi;
     # edf2asc and pandas
     - if [ "${DEPS}" == "full" ]; then
@@ -38,10 +38,10 @@ install:
         echo "deb http://download.sr-support.com/x64 /" | sudo tee -a /etc/apt/sources.list;
         travis_retry sudo apt-get update -qq;
         travis_retry sudo apt-get install -qq -y --force-yes edf2asc-3.1;
-        if [ "${PYTHON}" != "2.7" ]; then
-          conda install --yes --quiet pandas;
-        else
+        if [ "${PYTHON}" == "2.7" ]; then
           sudo apt-get install python-pandas;
+        else
+          conda install --yes --quiet pandas;
         fi;
       fi;
     - pip install -q coveralls nose-timer flake8

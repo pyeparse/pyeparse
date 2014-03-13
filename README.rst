@@ -33,8 +33,8 @@ To get the latest code using git, simply type::
     git clone git@github.com:dengemann/pyeparse.git
 
 If you don't have git installed, you can download a zip or tarball
-of the latest code:: 
-    
+of the latest code::
+
     git@github.com:dengemann/pyeparse.git
 
 Install pyeparse
@@ -54,7 +54,8 @@ Dependencies
 ^^^^^^^^^^^^
 
 The required dependencies to build the software are Python >= 2.6,
-NumPy >= 1.4, and Pandas >= 0.7.3
+NumPy >= 1.4, Scipy >= 0.11. Pandas is an optional dependency that
+speeds up file reading.
 
 
 Licensing

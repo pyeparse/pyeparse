@@ -4,16 +4,14 @@
 
 import numpy as np
 from datetime import datetime
-try:
-    from cStringIO import StringIO as sio
-except ImportError:  # py3 has renamed this
-    from io import StringIO as sio  # noqa
 from os import path as op
 
 from .constants import EDF
 from .event import find_events
 from .utils import raw_open
 from ._py23 import next, string_types
+from ._py23 import StringIO as sio
+from ._py23 import BytesIO as bio
 from .viz import plot_calibration, plot_heatmap_raw
 
 
@@ -107,9 +105,8 @@ def _parse_calibration(info, calib_lines):
                 subline = next(lines).split()
                 xy = subline[-6].split(',')
                 xy_diff = subline[-2].split(',')
-                vals = xy[:2] + [subline[-4]] + xy_diff[:2]
-                assert len(vals) == 5
-                vals = [float(v) for v in vals]
+                vals = [float(v) for v in [xy[0], xy[1], subline[-4],
+                                           xy_diff[0], xy_diff[1]]]
                 this_validation.append(vals)
             this_validation = np.array(this_validation).T
             validations.append(this_validation)
@@ -174,16 +171,19 @@ def _parse_put_event_format(info, def_lines):
     info['discretes'] = []
 
 
-def _read_samples_string(samples):
+def _read_samples_strings(samples):
     """Triage sample interpretation using Pandas or Numpy"""
     try:
         import pandas as pd
-    except:
-        samples = np.genfromtxt(samples, dtype=np.float64)
+    except Exception:
+        samples = bio(''.join(samples).encode('utf-8'))
+        data = np.genfromtxt(samples, dtype=np.float64).T
     else:
-        samples = pd.read_table(samples, sep='[ \t]+',
-                                na_values=['.', '...']).values.T.copy()
-    return samples
+        samples = sio(''.join(samples))
+        data = pd.read_table(samples, sep='[ \t]+',
+                             na_values=['.', '...']).values.T.copy()
+    samples.close()
+    return data
 
 
 def _read_raw(fname):
@@ -291,9 +291,7 @@ def _read_raw(fname):
                 info['calibration'] += this_info['calibration']
             fs = info['sfreq']
             assert fs == this_info['sfreq']
-            samples = run['samples']
-            samples = sio(''.join(samples))
-            samples = _read_samples_string(samples)
+            samples = _read_samples_strings(run['samples'])
             assert len(np.unique(samples[0])) == samples.shape[1]
             this_t_zero = samples[0, 0]
             if _t_zero is None:
@@ -307,7 +305,8 @@ def _read_raw(fname):
             this_discrete = {}
             kind_list = [run['esacc'], run['efix'], run['eblink']]
             for s, kind in zip(event_types, kind_list):
-                d = np.genfromtxt(sio(''.join(kind)), dtype=None)
+                d = np.genfromtxt(bio(''.join(kind).encode('utf-8')),
+                                  dtype=None)
                 disc = dict()
                 for ii, key in enumerate(info[s[:-1] + '_fields']):
                     disc[key] = d['f%s' % (ii + 1)]  # first field is junk

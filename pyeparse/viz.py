@@ -26,21 +26,21 @@ def plot_calibration(raw, title='Calibration', show=True):
     figs : list of of matplotlib.figure.Figure instances
         The resulting figure object
     """
-    import pylab as pl
+    import matplotlib.pyplot as mpl
     figs = []
     if 'calibration' not in raw.info:
         raise RuntimeError('No calibration found in raw')
     for cal in raw.info['calibration']:
-        fig = pl.figure()
+        fig = mpl.figure()
         figs.append(fig)
         px, py = cal['point-x'], cal['point-y']
         dx, dy = cal['diff-x'], cal['diff-y']
 
-        pl.title(title)
-        pl.scatter(px, py, color='gray')
-        pl.scatter(px - dx, py - dy, color='red')
+        mpl.title(title)
+        mpl.scatter(px, py, color='gray')
+        mpl.scatter(px - dx, py - dy, color='red')
     if show:
-        pl.show()
+        mpl.show()
     return figs
 
 
@@ -69,7 +69,7 @@ def plot_heatmap(xdata, ydata, width, height, cmap=None,
     canvas : ndarray (width, height)
         The canvas including the gaze data.
     """
-    import pylab as pl
+    import matplotlib.pyplot as mpl
     if cmap is None:
         cmap = 'RdBu_r'
 
@@ -97,7 +97,7 @@ def plot_heatmap(xdata, ydata, width, height, cmap=None,
         else:
             canvas[x, y] += 1
 
-    fig = pl.figure()
+    fig = mpl.figure()
     if vmin is None:
         vmin = canvas.min()
         vmax = canvas.max()
@@ -107,13 +107,13 @@ def plot_heatmap(xdata, ydata, width, height, cmap=None,
 
     # flip canvas to match width > height
     canvas = canvas.T
-    pl.imshow(canvas, extent=[0, width, 0, height],
-              cmap=cmap, aspect='auto', origin='lower', vmin=vmin,
-              vmax=vmax)
+    mpl.imshow(canvas, extent=[0, width, 0, height],
+               cmap=cmap, aspect='auto', origin='lower', vmin=vmin,
+               vmax=vmax)
     if colorbar:
-        pl.colorbar()
+        mpl.colorbar()
     if show:
-        pl.show()
+        mpl.show()
     return fig, canvas
 
 
@@ -140,7 +140,7 @@ def plot_heatmap_raw(raw, start=None, stop=None, cmap=None,
     fig : instance of matplotlib.figure.Figure
         The resulting figure object
     """
-    import pylab as pl
+    import matplotlib.pyplot as mpl
     if 'screen_coords' not in raw.info:
         raise RuntimeError('Raw object does not include '
                            'screemncoordinates.')
@@ -158,13 +158,13 @@ def plot_heatmap_raw(raw, start=None, stop=None, cmap=None,
     if title is None:
         tstart, tstop = times[start:stop][[0, -1]]
         title = 'Raw data | {0} - {1} seconds'.format(tstart, tstop)
-    pl.title(title)
-    pl.xlabel('X position (px)')
-    pl.ylabel('y position (px)')
+    mpl.title(title)
+    mpl.xlabel('X position (px)')
+    mpl.ylabel('y position (px)')
     if colorbar:
-        pl.colorbar()
+        mpl.colorbar()
     if show:
-        pl.show()
+        mpl.show()
     return fig
 
 """
@@ -175,11 +175,11 @@ Eric Larson's contribution to MNE-Python
 
 def figure_nobar(*args, **kwargs):
     """Make matplotlib figure with no toolbar"""
-    import pylab as pl
-    old_val = pl.mpl.rcParams['toolbar']
+    import matplotlib.pyplot as mpl
+    old_val = mpl.rcParams['toolbar']
     try:
-        pl.mpl.rcParams['toolbar'] = 'none'
-        fig = pl.figure(*args, **kwargs)
+        mpl.rcParams['toolbar'] = 'none'
+        fig = mpl.figure(*args, **kwargs)
         # remove button press catchers (for toolbar)
         keys = list(fig.canvas.callbacks.callbacks['key_press_event'].keys())
         for key in keys:
@@ -187,14 +187,14 @@ def figure_nobar(*args, **kwargs):
     except Exception as ex:
         raise ex
     finally:
-        pl.mpl.rcParams['toolbar'] = old_val
+        mpl.rcParams['toolbar'] = old_val
     return fig
 
 
 def _prepare_trellis(n_cells, max_col):
     """Aux function
     """
-    import pylab as pl
+    import matplotlib.pyplot as mpl
     if n_cells == 1:
         nrow = ncol = 1
     elif n_cells <= max_col:
@@ -202,7 +202,7 @@ def _prepare_trellis(n_cells, max_col):
     else:
         nrow, ncol = int(math.ceil(n_cells / float(max_col))), max_col
 
-    fig, axes = pl.subplots(nrow, ncol)
+    fig, axes = mpl.subplots(nrow, ncol)
     axes = [axes] if ncol == nrow == 1 else axes.flatten()
     for ax in axes[n_cells:]:  # hide unused axes
         ax.set_visible(False)
@@ -215,7 +215,7 @@ def _draw_epochs_axes(epoch_idx, data, times, axes,
     """Aux functioin"""
     this = axes_handler[0]
     data = np.ma.masked_invalid(data)
-    import pylab as pl
+    import matplotlib.pyplot as mpl
     for ii, data_, ax in zip(epoch_idx, data, axes):
         [l.set_data(times, d) for l, d in zip(ax.lines, data_)]
         n_disc_lines = 0
@@ -240,7 +240,7 @@ def _draw_epochs_axes(epoch_idx, data, times, axes,
             [l.set_fontsize(8) for l in ax.get_xticklabels()]
             [l.set_fontsize(8) for l in ax.get_yticklabels()]
             labels = ax.get_xticklabels()
-            pl.setp(labels, rotation=45)
+            mpl.setp(labels, rotation=45)
         ax.get_figure().canvas.draw()
         vars(ax)[this]['n_disc_lines'] = n_disc_lines
         if vars(ax)[this]['reject'] is True:
@@ -260,7 +260,7 @@ def _draw_epochs_axes(epoch_idx, data, times, axes,
 
 def _epochs_navigation_onclick(event, params):
     """Aux function"""
-    import pylab as pl
+    import matplotlib.pyplot as mpl
     p = params
     here = None
     if event.inaxes == p['back'].ax:
@@ -270,8 +270,8 @@ def _epochs_navigation_onclick(event, params):
     elif event.inaxes == p['reject-quit'].ax:
         if p['reject_idx']:
             pass
-        pl.close(p['fig'])
-        pl.close(event.inaxes.get_figure())
+        mpl.close(p['fig'])
+        mpl.close(event.inaxes.get_figure())
 
     if here is not None and len(p['axes_handler']) > 1:
         before = p['axes_handler'][0]
@@ -370,7 +370,7 @@ def plot_epochs(epochs, epoch_idx=None, picks=None, n_chunks=20,
     fig : Instance of matplotlib.figure.Figure
         The figure.
     """
-    import pylab as pl
+    import matplotlib.pyplot as mpl
     if np.isscalar(epoch_idx):
         epoch_idx = [epoch_idx]
     if epoch_idx is None:
@@ -451,7 +451,7 @@ def plot_epochs(epochs, epoch_idx=None, picks=None, n_chunks=20,
         else:
             [l.set_fontsize(labelfontsize) for l in ax.get_xticklabels()]
             labels = ax.get_xticklabels()
-            pl.setp(labels, rotation=45)
+            mpl.setp(labels, rotation=45)
         vars(ax)[axes_handler[0]] = {'idx': ii, 'reject': False,
                                      'n_disc_lines': n_disc_lines}
 
@@ -469,9 +469,9 @@ def plot_epochs(epochs, epoch_idx=None, picks=None, n_chunks=20,
     navigation = figure_nobar(figsize=(3, 1.5))
     from matplotlib import gridspec
     gs = gridspec.GridSpec(2, 2)
-    ax1 = pl.subplot(gs[0, 0])
-    ax2 = pl.subplot(gs[0, 1])
-    ax3 = pl.subplot(gs[1, :])
+    ax1 = mpl.subplot(gs[0, 0])
+    ax2 = mpl.subplot(gs[0, 1])
+    ax3 = mpl.subplot(gs[1, :])
 
     params = {
         'fig': fig,
@@ -481,9 +481,9 @@ def plot_epochs(epochs, epoch_idx=None, picks=None, n_chunks=20,
         'picks': picks,
         'times': times,
         'axes': axes,
-        'back': pl.mpl.widgets.Button(ax1, 'back'),
-        'next': pl.mpl.widgets.Button(ax2, 'next'),
-        'reject-quit': pl.mpl.widgets.Button(ax3, 'reject-quit'),
+        'back': mpl.Button(ax1, 'back'),
+        'next': mpl.Button(ax2, 'next'),
+        'reject-quit': mpl.Button(ax3, 'reject-quit'),
         'title_str': title_str,
         'reject_idx': [],
         'axes_handler': axes_handler,
@@ -496,5 +496,5 @@ def plot_epochs(epochs, epoch_idx=None, picks=None, n_chunks=20,
                                   partial(_epochs_navigation_onclick,
                                           params=params))
     if show is True:
-        pl.show(block=block)
+        mpl.show(block=block)
     return fig
