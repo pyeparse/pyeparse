@@ -25,7 +25,6 @@ def test_raw_io():
         if fi == 0:  # First test file has this property
             for kind in ['saccades', 'fixations', 'blinks']:
                 # relax, depends on data
-                print raw.discrete[kind].keys()
                 assert_true(raw.discrete[kind]['stime'][0] < 5.0)
         assert_true(raw['time'][0][0] < 1.0)
         for interp in [None, 'zoh', 'linear']:

@@ -3,7 +3,6 @@
 # License: BSD (3-clause)
 
 import numpy as np
-import copy
 from datetime import datetime
 try:
     from cStringIO import StringIO as sio
@@ -99,6 +98,7 @@ def _parse_calibration(info, calib_lines):
     """Parse EL header information"""
     validations = list()
     lines = iter(calib_lines)
+    keys = ['point-x', 'point-y', 'offset', 'diff-x', 'diff-y']
     for line in lines:
         if '!CAL VALIDATION ' in line and not 'ABORTED' in line:
             cal_kind = line.split('!CAL VALIDATION ')[1].split()[0]
@@ -109,11 +109,11 @@ def _parse_calibration(info, calib_lines):
                 subline = next(lines).split()
                 xy = subline[-6].split(',')
                 xy_diff = subline[-2].split(',')
-                this_validation.append({'point-x': xy[0],
-                                        'point-y': xy[1],
-                                        'offset': subline[-4],
-                                        'diff-x': xy_diff[0],
-                                        'diff-y': xy_diff[1]})
+                vals = xy[:2] + [subline[-4]] + xy_diff[:2]
+                assert len(vals) == 5
+                vals = [float(v) for v in vals]
+                this_validation.append(vals)
+            this_validation = np.array(this_validation).T
             validations.append(this_validation)
         elif any([k in line for k in EDF.MLINES]):
             additional_lines = []
@@ -129,8 +129,13 @@ def _parse_calibration(info, calib_lines):
         elif 'DISPLAY_COORDS' in line:
             info['screen_coords'] = np.array(line.split()[-2:],
                                              dtype='i8')
-
-    return validations[-1]
+    if len(validations) > 0:
+        out = dict()
+        for key, val in zip(keys, validations[-1]):
+            out[key] = val
+    else:
+        out = validations
+    return out
 
 
 def _parse_put_event_format(info, def_lines):
@@ -147,7 +152,7 @@ def _parse_put_event_format(info, def_lines):
 
     for line in def_lines:
         extra, eye, sfreq, track, filt = _get_fields(line)
-        if line[:7] == 'SAMPLES':
+        if line.startswith('SAMPLES'):
             fields = ['time', 'xpos', 'ypos', 'ps']
             key = 'sample_fields'
         else:
@@ -167,6 +172,7 @@ def _parse_put_event_format(info, def_lines):
         info[key] = fields
     info['saccade_fields'] = saccade_fields
     info['fixation_fields'] = fixation_fields
+    info['blink_fields'] = EDF.BLINK_FIELDS
     info['discretes'] = []
 
 
@@ -197,6 +203,7 @@ class Raw(object):
         def_lines, samples, esacc, efix, eblink, calibs, preamble, \
             messages = [list() for _ in range(8)]
         started = False
+        event_types = ['saccades', 'fixations', 'blinks']
         runs = []
         if not op.isfile(fname):
             raise IOError('file "%s" not found' % fname)
@@ -275,38 +282,58 @@ class Raw(object):
             else:
                 assert all([k == values[0] for k in values[1:]])
         # parse the header
-        info_runs, samples_runs, discrete_runs = [], [], []
+        samples_runs, discrete_runs = [], []
+        discrete = dict()
+        fs = None
+        info = None
+        self._t_zero = None
+        offset = 0
+        assert len(runs) > 0
         for ii, run in enumerate(runs):
-            info = {}
+            this_info = dict(calibration=list())
             if run['preamble']:
-                _parse_pramble(info, run['preamble'])
+                _parse_pramble(this_info, run['preamble'])
 
-            _parse_def_lines(info, run['def_lines'])
-            if not all([x in info
+            _parse_def_lines(this_info, run['def_lines'])
+            if not all([x in this_info
                         for x in ['sample_fields', 'event_fields']]):
                 raise RuntimeError('could not parse header')
-
             if run['calibs']:
-                validation = _parse_calibration(info, run['calibs'])
-                validation = np.array(validation)
-                info['calibration'] = validation
-                if 'sample_fields' not in info:
-                    _parse_put_event_format(info, run['def_lines'])
+                validation = _parse_calibration(this_info, run['calibs'])
+                this_info['calibration'] = [validation]
+                if 'sample_fields' not in this_info:
+                    _parse_put_event_format(this_info, run['def_lines'])
+            if info is None:
+                info = this_info
+                info['event_types'] = event_types
+            else:
+                info['calibration'] += this_info['calibration']
+            fs = info['sfreq']
+            assert fs == this_info['sfreq']
             samples = run['samples']
             samples = ''.join(samples)
             samples = np.genfromtxt(sio(samples)).T
-            discrete = {}
-            kind_str = ['saccades', 'fixations', 'blinks']
+            assert len(np.unique(samples[0])) == samples.shape[1]
+            this_t_zero = samples[0, 0]
+            if self._t_zero is None:
+                self._t_zero = this_t_zero
+            samples[0] -= this_t_zero
+            samples[0] /= 1e3
+            samples += offset
+            samples_runs.append(samples)
+
+            # parse discretes
+            this_discrete = {}
             kind_list = [run['esacc'], run['efix'], run['eblink']]
-            column_list = [info['saccade_fields'],
-                           info['fixation_fields'],
-                           EDF.BLINK_FIELDS]
-            for s, kind, cols in zip(kind_str, kind_list, column_list):
+            for s, kind in zip(event_types, kind_list):
                 d = np.genfromtxt(sio(''.join(kind)), dtype=None)
                 disc = dict()
-                for ii, key in enumerate(cols):
+                for ii, key in enumerate(info[s[:-1] + '_fields']):
                     disc[key] = d['f%s' % (ii + 1)]  # first field is junk
-                discrete[s] = disc
+                for key in ('stime', 'etime'):
+                    disc[key] = (disc[key] - this_t_zero) / 1e3 + offset
+                assert np.all(disc['stime'] < disc['etime'])
+                this_discrete[s] = disc
 
             # parse messages
             times = list()
@@ -316,66 +343,25 @@ class Raw(object):
                 assert x[0] == 'MSG'
                 times.append(x[1])
                 msgs.append(x[2])
-            discrete['messages'] = dict()
-            times = np.array(times, dtype=np.float64)
+            times = (np.array(times, np.float64) - this_t_zero) / 1e3 + offset
             msgs = np.array(msgs, dtype='O')
-            for key, val in zip(EDF.MESSAGE_FIELDS, [times, msgs]):
-                discrete['messages'][key] = np.array(val)
+            this_discrete['messages'] = dict(time=times, msg=msgs)
+            discrete_runs.append(this_discrete)
 
-            is_unique = len(np.unique(samples[0])) == samples.shape[1]
-            if not is_unique:
-                raise RuntimeError('The time stamp found has non-unique '
-                                   'values. Please check your conversion '
-                                   'settings and make sure not to use the '
-                                   'float option.')
+            # set offset for next group
+            offset += samples[0, -1] + 1. / fs
 
-            # set t0 to 0 and scale to seconds
-            _t_zero = samples[0, 0]
-            samples[0] -= _t_zero
-            samples[0] /= 1e3
-            discrete['messages']['time'] -= _t_zero
-            discrete['messages']['time'] /= 1e3
-            info['event_types'] = []
-            for kind in ['saccades', 'fixations', 'blinks']:
-                df = discrete.get(kind, None)
-                if df is not None:
-                    for key in ('stime', 'etime'):
-                        df[key] = (df[key] - _t_zero) / 1e3  # convert to fl
-                    assert np.all(df['stime'] < df['etime'])
-                    info['event_types'].append(kind)
-            if ii < 1:
-                self._t_zero = _t_zero
-            info_runs.append(info)
-            discrete_runs.append(discrete)
-            samples_runs.append(samples)
+        # combine all fields
+        for kind in (event_types + ['messages']):
+            discrete[kind] = dict()
+            for col in discrete_runs[0][kind].keys():
+                concat = np.concatenate([d[kind][col]
+                                         for d in discrete_runs])
+                discrete[kind][col] = concat
 
-        assert len(samples_runs) == len(discrete_runs) == len(info_runs)
-        if len(samples_runs) == 1:
-            self.info = info_runs[0]
-            self.discrete = discrete_runs[0]
-            self._samples = samples_runs[0]
-        else:
-            fs = info_runs[0]['sfreq']
-            offsets = np.cumsum([0] + [s[0][-1] + 1. / fs
-                                       for s in samples_runs[:-1]])
-            for s, d, off in zip(samples_runs, discrete_runs, offsets):
-                s[0] += off
-                for kind in info['event_types']:
-                    d[kind]['stime'] += off
-                    d[kind]['etime'] += off
-            discrete = dict()
-            for kind in info['event_types']:
-                discrete[kind] = dict()
-                for col in d[kind].keys():
-                    concat = np.concatenate([d[kind][col]
-                                             for d in discrete_runs])
-                    discrete[kind][col] = concat
-            info = copy.deepcopy(info_runs[0])
-            info['calibration'] = copy.deepcopy([i['calibration']
-                                                 for i in info_runs])
-            self.info = info
-            self.discrete = discrete
-            self._samples = np.concatenate(samples_runs, axis=1)
+        self.info = info
+        self.discrete = discrete
+        self._samples = np.concatenate(samples_runs, axis=1)
         assert self._samples.shape[0] == len(self.info['sample_fields'])
         self.info['fname'] = fname
 

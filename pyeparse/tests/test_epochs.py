@@ -86,7 +86,7 @@ def test_epochs_concat():
         # make sure actual data matches
         data_ab = epochs_ab.data
         data_ba = epochs_ba.data
-        #assert_array_equal(data_ab, data_ba[:, reord])  XXX FIX
+        assert_array_equal(data_ab, data_ba[reord])
         # test discretes
         assert_equal(len(epochs_ab.blinks), len(epochs_ba.blinks))
         blink_ab = epochs_ab.blinks[3]
@@ -121,17 +121,15 @@ def test_epochs_io():
         for disc in epochs.info['discretes']:
             assert_equal(len(vars(epochs)[disc]), len(epochs.events))
         assert_equal(len(epochs.events), 2)
-        """
-        assert_equal(epochs.data_frame.shape[0] / epochs._n_times,
-                     len(epochs.events))
-        assert_true(epochs.data_frame['time'].diff().min() >= 0)
+        #assert_equal(epochs.data_frame.shape[0] / epochs._n_times,
+        #             len(epochs.events))
+        #assert_true(epochs.data_frame['time'].diff().min() >= 0)
 
         epochs = Epochs(raw, events, dict(a=999, b=77), tmin, tmax)
         assert_equal(len(epochs.events), 3)
-        assert_equal(epochs.data_frame.shape[0] / epochs._n_times,
-                     len(epochs.events))
-        assert_true(epochs.data_frame['time'].diff().min() >= 0)
-        """
+        #assert_equal(epochs.data_frame.shape[0] / epochs._n_times,
+        #             len(epochs.events))
+        #assert_true(epochs.data_frame['time'].diff().min() >= 0)
 
         for disc in epochs.info['discretes']:
             this_disc = vars(epochs)[disc]

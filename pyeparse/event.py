@@ -49,6 +49,8 @@ def find_events(raw, pattern, event_id):
         out = raw.time_as_index(df['time'][idx])
         id_vector = np.repeat(event_id, len(out)).astype(np.int64)
         return np.c_[out, id_vector]
+    else:
+        return np.zeros((0, 2), dtype=np.int64)
 
 
 def find_custom_events(raw, pattern, event_id, prefix=True, sep='\W+',

@@ -2,7 +2,7 @@
 #
 # License: BSD (3-clause)
 
-import copy
+from copy import deepcopy
 import numpy as np
 from scipy.optimize import fmin_slsqp
 import warnings
@@ -48,7 +48,7 @@ class Epochs(object):
             event_id = {str(event_id): event_id}
         if not isinstance(event_id, dict):
             raise RuntimeError('event_id must be an int or dict')
-        self.event_id = copy.deepcopy(event_id)
+        self.event_id = deepcopy(event_id)
         self.tmin = tmin
         self.tmax = tmax
         self._current = 0
@@ -72,9 +72,8 @@ class Epochs(object):
         idx_offsets = raw[0].time_as_index([self.tmin, self.tmax])
         n_samples = idx_offsets[1] - idx_offsets[0]
         self._n_times = n_samples
-        self.times = np.linspace(self.tmin, self.tmax, self._n_times)
         self.info = dict(sfreq=raw[0].info['sfreq'],
-                         data_cols=raw[0].info['sample_fields'])
+                         data_cols=deepcopy(raw[0].info['sample_fields'][1:]))
         for r in raw[1:]:
             if r.info['sfreq'] != raw[0].info['sfreq']:
                 raise RuntimeError('incompatible raw files')
@@ -93,12 +92,12 @@ class Epochs(object):
         _events = np.concatenate(_events)
         self.events = _events
 
-        self._data = np.empty((len(self.info['data_cols']),
-                               e_off[-1], self.n_times))
+        self._data = np.empty((e_off[-1], len(self.info['data_cols']),
+                               self.n_times))
         # Need to add offsets to our epoch indices
         for _samp, e1, e2, t in zip(_samples, e_off[:-1], e_off[1:], t_off):
-            self._data[0, e1:e2] = _samp[0] + t
-            self._data[1:, e1:e2] = _samp[1:]
+            for ii in range(len(_samp)):
+                self._data[e1:e2, ii] = _samp[ii]
 
         # deal with discretes
         for kind in discrete_types:
@@ -111,7 +110,7 @@ class Epochs(object):
 
     def _process_raw_events(self, raw, events, my_event_id, event_keys,
                             idx_offsets):
-        data, times = raw._samples[1:], raw._samples[0]
+        times = raw.times.copy()
         sample_inds = []
         keep_idx = []
         # prevent the evil
@@ -147,7 +146,7 @@ class Epochs(object):
                     this_disc.append(subdict)
         events = events[keep_idx]
         sample_inds = np.array(sample_inds)
-        samples = raw._samples[:, sample_inds]
+        samples = raw[1:, sample_inds][0]
         for kind in raw.info['event_types']:
             assert len(discretes[kind]) == len(events)
         return samples, discretes, events
@@ -170,13 +169,14 @@ class Epochs(object):
         """
         if self._current >= len(self):
             raise StopIteration
-        epoch = self.data_frame.ix[self._current]
-        epoch = epoch[self.info['data_cols']].values.T
+        epoch = self._data[self._current]
+        event = self.events[self._current, -1]
         self._current += 1
         if not return_event_id:
-            return epoch
+            out = epoch
         else:
-            return epoch, self.events[self._current - 1][-1]
+            out = (epoch, event)
+        return out
 
     def __next__(self, *args, **kwargs):
         return self.next(*args, **kwargs)
@@ -201,7 +201,7 @@ class Epochs(object):
         if kind not in self.info['data_cols']:
             raise ValueError('kind "%s" must be one of %s'
                              % (kind, self.info['data_cols']))
-        return self._data[self.info['data_cols'].index(kind)]
+        return self._data[:, self.info['data_cols'].index(kind)]
 
     @property
     def data_frame(self):
@@ -209,22 +209,36 @@ class Epochs(object):
 
     @property
     def ch_names(self):
-        return [k for k in self.data_frame.columns]
+        return self.info['data_cols']
 
     @property
     def n_times(self):
-        return len(self.times)
+        return self._n_times
+
+    @property
+    def times(self):
+        return (np.arange(self.n_times).astype(float) / self.info['sfreq']
+                + self.tmin)
+
+    def _str_to_idx(self, string):
+        """Convert epoch string label to set of indices"""
+        if string not in self.event_id:
+            raise IndexError('ID "%s" not found, must be one of %s'
+                             % (string, list(self.event_id.keys())))
+        idx = np.where(self.events[:, -1] == self.event_id[string])[0]
+        return idx
 
     def __getitem__(self, idx):
         out = self.copy()
         if isinstance(idx, string_types):
-            if idx not in self.event_id:
-                raise ValueError('ID not found')
-            idx = self.event_id[idx]
-            idx = np.where(self.events[:, -1] == idx)[0]
-        else:
-            idx = np.sort(np.atleast_1d(idx))
-        out._data = out._data[:, idx]
+            idx = self._str_to_idx(idx)
+        elif isinstance(idx, list):
+            if all([isinstance(ii, string_types) for ii in idx]):
+                idx = np.concatenate([self._str_to_idx(ii) for ii in idx])
+        if isinstance(idx, slice):
+            idx = np.arange(len(self))[idx]
+        idx = np.atleast_1d(np.sort(idx))
+        out._data = out._data[idx]
         out.events = out.events[idx]
         for discrete in self.info['discretes']:
             disc = getattr(self, discrete)
@@ -250,7 +264,7 @@ class Epochs(object):
     def copy(self):
         """Return a copy of Epochs.
         """
-        return copy.deepcopy(self)
+        return deepcopy(self)
 
     def plot(self, epoch_idx=None, picks=None, n_chunks=20,
              title_str='#%003i', show=True, draw_discrete=None,
@@ -372,7 +386,7 @@ class Epochs(object):
 
         old_idx = np.delete(np.arange(len(self)), indices)
         self.events = np.delete(self.events, indices, axis=0)
-        self._data = np.delete(self._data, indices, axis=1)
+        self._data = np.delete(self._data, indices, axis=0)
         for key in self.info['discretes']:
             val = getattr(self, key)
             setattr(self, key, [val[ii] for ii in old_idx])

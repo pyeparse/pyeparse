@@ -33,8 +33,8 @@ def plot_calibration(raw, title='Calibration', show=True):
     for cal in raw.info['calibration']:
         fig = pl.figure()
         figs.append(fig)
-        px, py = cal[['point-x', 'point-y']].values.T
-        dx, dy = cal[['diff-x', 'diff-y']].values.T
+        px, py = cal['point-x'], cal['point-y']
+        dx, dy = cal['diff-x'], cal['diff-y']
 
         pl.title(title)
         pl.scatter(px, py, color='gray')
@@ -415,7 +415,7 @@ def plot_epochs(epochs, epoch_idx=None, picks=None, n_chunks=20,
         for k in epochs.info['discretes']:
             key[k.strip('_')] = k
         key = key[draw_discrete]
-        discretes = [d['stime'].values * 1e3 for d in vars(epochs)[key]
+        discretes = [d['stime'] * 1e3 for d in vars(epochs)[key]
                      if d is not None]
     elif draw_discrete is None:
         discretes = None
