@@ -41,7 +41,7 @@ install:
         if [ "${PYTHON}" != "2.7" ]; then
           conda install --yes --quiet pandas;
         else
-          pip install pandas;
+          sudo apt-get install python-pandas;
         fi;
       fi;
     - pip install -q coveralls nose-timer flake8
