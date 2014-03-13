@@ -70,10 +70,11 @@ class Epochs(object):
         assert len(raw) > 0
         # figure out parameters to use
         idx_offsets = raw[0].time_as_index([self.tmin, self.tmax])
-        n_samples = idx_offsets[1] - idx_offsets[0]
-        self._n_times = n_samples
+        n_times = idx_offsets[1] - idx_offsets[0]
+        self._n_times = n_times
         self.info = dict(sfreq=raw[0].info['sfreq'],
-                         data_cols=deepcopy(raw[0].info['sample_fields'][1:]))
+                         data_cols=deepcopy(raw[0].info['sample_fields'][1:]),
+                         ps_units=raw[0].info['ps_units'])
         for r in raw[1:]:
             if r.info['sfreq'] != raw[0].info['sfreq']:
                 raise RuntimeError('incompatible raw files')

@@ -340,7 +340,8 @@ def _read_raw(fname):
                                          for d in discrete_runs])
                 discrete[kind][col] = concat
         samples = np.concatenate(samples_runs, axis=1)
-        return info, discrete, samples, _t_zero
+        info['sample_fields'] = info['sample_fields'][1:]
+        return info, discrete, samples[0], samples[1:], _t_zero
 
 
 class Raw(object):
@@ -352,9 +353,10 @@ class Raw(object):
         The name of the ASCII converted EDF file.
     """
     def __init__(self, fname):
-        info, discrete, samples, t_zero = _read_raw(fname)
+        info, discrete, times, samples, t_zero = _read_raw(fname)
         self.info = info
         self.discrete = discrete
+        self._times = times
         self._samples = samples
         self._t_zero = t_zero
         assert self._samples.shape[0] == len(self.info['sample_fields'])
@@ -382,7 +384,7 @@ class Raw(object):
         elif len(idx) == 1:
             idx = (idx[0], slice(None))
         data = self._samples[idx]
-        times = self._samples[0][idx[1:]]
+        times = self.times[idx[1:]]
         return data, times
 
     def _di(self, key):
@@ -394,7 +396,7 @@ class Raw(object):
 
     @property
     def n_samples(self):
-        return self._samples.shape[1]
+        return len(self.times)
 
     def __len__(self):
         return self.n_samples
@@ -443,7 +445,7 @@ class Raw(object):
 
     @property
     def times(self):
-        return self._samples[0].copy()
+        return self._times
 
     def time_as_index(self, times):
         """Convert time to indices

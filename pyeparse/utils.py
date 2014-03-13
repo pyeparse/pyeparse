@@ -100,8 +100,13 @@ def _has_edf2asc():
     p = subprocess.Popen(['edf2asc', '--help'],
                          stderr=subprocess.PIPE,
                          stdout=subprocess.PIPE)
-    stdout_, stderr = p.communicate()
-    return True if p.returncode == 255 else False
+    try:
+        stdout_, stderr = p.communicate()
+    except Exception:
+        out = False
+    else:
+        out = True
+    return out
 
 
 def _get_test_fnames():
