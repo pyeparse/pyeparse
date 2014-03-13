@@ -3,7 +3,6 @@
 # License: BSD (3-clause)
 
 import numpy as np
-import pandas as pd
 from datetime import datetime
 try:
     from cStringIO import StringIO as sio
@@ -175,6 +174,18 @@ def _parse_put_event_format(info, def_lines):
     info['discretes'] = []
 
 
+def _read_samples_string(samples):
+    """Triage sample interpretation using Pandas or Numpy"""
+    try:
+        import pandas as pd
+    except:
+        samples = np.genfromtxt(samples, dtype=np.float64)
+    else:
+        samples = pd.read_table(samples, sep='[ \t]+',
+                                na_values=['.', '...']).values.T.copy()
+    return samples
+
+
 def _read_raw(fname):
         def_lines, esacc, efix, eblink, calibs, preamble, messages = \
             [list() for _ in range(7)]
@@ -281,10 +292,8 @@ def _read_raw(fname):
             fs = info['sfreq']
             assert fs == this_info['sfreq']
             samples = run['samples']
-            samples = ''.join(samples)
-            samples = pd.read_table(sio(samples), sep='[ \t]+',
-                                    na_values=['.', '...'])
-            samples = samples.values.T.copy()
+            samples = sio(''.join(samples))
+            samples = _read_samples_string(samples)
             assert len(np.unique(samples[0])) == samples.shape[1]
             this_t_zero = samples[0, 0]
             if _t_zero is None:

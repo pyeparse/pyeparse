@@ -1,5 +1,4 @@
 import numpy as np
-import pandas as pd
 import warnings
 from os import path as op
 from nose.tools import assert_true
@@ -29,7 +28,7 @@ def test_find_custom_events():
 def test_discrete():
     """Test discrete events container"""
     dis = Discrete()
-    dis.extend([np.array([1]), pd.DataFrame(), 'aaaa'])
+    dis.extend([np.array([1]), 'aaaa'])
     myrepr = '%s' % dis
     checksum = sum([int(d) for d in myrepr if d.isdigit()])
     assert_equal(checksum, 5 + len(dis))
