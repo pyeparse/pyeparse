@@ -97,11 +97,10 @@ class raw_open(object):
 
 def _has_edf2asc():
     """See if the user has edf2asc"""
-    p = subprocess.Popen(['edf2asc', '--help'],
+    try:
+        subprocess.Popen(['edf2asc', '--help'],
                          stderr=subprocess.PIPE,
                          stdout=subprocess.PIPE)
-    try:
-        stdout_, stderr = p.communicate()
     except Exception:
         out = False
     else:
