@@ -29,12 +29,12 @@ install:
         conda create -n testenv --yes --quiet pip python=$PYTHON;
         source activate testenv;
         conda install --yes --quiet scipy nose matplotlib;
-        if [ "DEPS" == "full" ]: then
+        if [ "${DEPS}" == "full" ]; then
           conda install --yes --quiet pandas;
         fi;
       else
         travis_retry sudo apt-get -qq install python-scipy python-nose python-matplotlib;
-        if [ "DEPS" == "full" ]; then
+        if [ "${DEPS}" == "full" ]; then
           pip install pandas;
         fi;
       fi;
