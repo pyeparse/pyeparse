@@ -1,16 +1,14 @@
 import numpy as np
 from numpy.testing import assert_allclose
 import warnings
-from os import path as op
 from nose.tools import assert_true, assert_equal
 
 from pyeparse import Raw
+from pyeparse.utils import _get_test_fnames
 
 warnings.simplefilter('always')  # in case we hit warnings
 
-path = op.join(op.split(__file__)[0], 'data')
-fnames = [op.join(path, 'test_raw.asc'),
-          op.join(path, 'test_2_raw.asc')]
+fnames = _get_test_fnames()
 
 
 def test_raw_io():

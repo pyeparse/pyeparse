@@ -16,7 +16,7 @@ fname = op.join(op.dirname(__file__), 'data', 'test_raw.asc')
 def test_find_custom_events():
     """Test finding user-defined events"""
     raw = Raw(fname)
-    events = find_custom_events(raw, 'user-event', 1)
+    events = find_custom_events(raw, fname, 'user-event', 1)
     assert_equal(len(events), 24)
     assert_equal(set(events[:, 1]), set([1]))
     events2 = raw.find_events('user-event', 1)

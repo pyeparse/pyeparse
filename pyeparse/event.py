@@ -4,7 +4,7 @@
 
 import re
 import numpy as np
-from .utils import string_types
+from .utils import string_types, raw_open
 
 
 class Discrete(list):
@@ -53,7 +53,7 @@ def find_events(raw, pattern, event_id):
         return np.zeros((0, 2), dtype=np.int64)
 
 
-def find_custom_events(raw, pattern, event_id, prefix=True, sep='\W+',
+def find_custom_events(raw, fname, pattern, event_id, prefix=True, sep='\W+',
                        return_residuals=False):
     """Find arbitrary messages from raw data file
 
@@ -61,6 +61,10 @@ def find_custom_events(raw, pattern, event_id, prefix=True, sep='\W+',
     ----------
     raw : instance of pyeparse.raw.Raw
         the raw file to find events in.
+    fname : str
+        The filename for the data file to search. This must be provided
+        because the data stored in ``raw`` has been converted from the
+        original format (and thus cannot be traversed).
     pattern : str
         A substring to be matched (using regular expressions).
     event_id : int
@@ -83,7 +87,7 @@ def find_custom_events(raw, pattern, event_id, prefix=True, sep='\W+',
     residuals = []
 
     idx = 1 if prefix else 0
-    with open(raw.info['fname']) as fid:
+    with raw_open(fname) as fid:
         for line in fid:
             if len(re.findall(pattern, line)) > 0:
                 event = re.split(sep, line)

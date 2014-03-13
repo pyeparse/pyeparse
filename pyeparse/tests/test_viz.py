@@ -1,19 +1,17 @@
 import numpy as np
 from nose.tools import assert_raises
 from functools import partial
-from os import path as op
 import warnings
 import matplotlib
 
 from pyeparse import Raw, Epochs
 from pyeparse.viz import _epochs_axes_onclick, _epochs_navigation_onclick
+from pyeparse.utils import _get_test_fnames
 
 warnings.simplefilter('always')  # in case we hit warnings
 matplotlib.use('Agg')  # for testing don't use X server
 
-path = op.join(op.dirname(__file__), 'data')
-fnames = [op.join(path, 'test_raw.asc'),
-          op.join(path, 'test_2_raw.asc')]
+fnames = _get_test_fnames()
 
 
 class DummyEvent(object):

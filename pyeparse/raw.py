@@ -9,14 +9,12 @@ try:
     from cStringIO import StringIO as sio
 except ImportError:  # py3 has renamed this
     from io import StringIO as sio  # noqa
-import tempfile
-import subprocess
-import shutil
 from os import path as op
 
 from .constants import EDF
 from .event import find_events
-from .utils import next, string_types
+from .utils import raw_open
+from ._py23 import next, string_types
 from .viz import plot_calibration, plot_heatmap_raw
 
 
@@ -177,20 +175,6 @@ def _parse_put_event_format(info, def_lines):
     info['discretes'] = []
 
 
-def _convert_edf(fname):
-    """Helper to convert EDF to ASC on the fly for conversion"""
-    # Ideally we will eventually handle the binary files directly
-    out_dir = tempfile.mkdtemp('edf2asc')
-    out_fname = op.join(out_dir, 'temp.asc')
-    p = subprocess.Popen(['edf2asc', fname, out_fname], stderr=subprocess.PIPE,
-                         stdout=subprocess.PIPE)
-    stdout_, stderr = p.communicate()
-    if p.returncode != 255:
-        print((p.returncode, stdout_, stderr))
-        raise RuntimeError('Could not convert EDF to ASC')
-    return out_fname, out_dir
-
-
 def _read_raw(fname):
         def_lines, esacc, efix, eblink, calibs, preamble, messages = \
             [list() for _ in range(7)]
@@ -200,10 +184,7 @@ def _read_raw(fname):
         runs = []
         if not op.isfile(fname):
             raise IOError('file "%s" not found' % fname)
-        del_dir = None
-        if fname.endswith('.edf'):
-            fname, del_dir = _convert_edf(fname)
-        with open(fname, 'r') as fid:
+        with raw_open(fname) as fid:
             for line in fid:
                 if line[0] in ['#/;']:  # comment line, ignore it
                     continue
@@ -259,8 +240,6 @@ def _read_raw(fname):
                     else:
                         raise RuntimeError('data not understood: "%s"'
                                            % line)
-        if del_dir is not None:
-            shutil.rmtree(del_dir)  # to remove temporary conversion files
         runs.append(dict(def_lines=def_lines, samples=samples,
                          esacc=esacc, efix=efix, eblink=eblink,
                          calibs=calibs, preamble=preamble,
@@ -370,7 +349,6 @@ class Raw(object):
         self._samples = samples
         self._t_zero = t_zero
         assert self._samples.shape[0] == len(self.info['sample_fields'])
-        self.info['fname'] = fname
 
     def __repr__(self):
         return '<Raw | {0} samples>'.format(self.n_samples)

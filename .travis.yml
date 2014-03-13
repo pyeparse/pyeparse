@@ -11,7 +11,7 @@ env:
     - PYTHON=2.6 DEPS=full
     - PYTHON=2.7 DEPS=full
     - PYTHON=3.3 DEPS=full
-    - PYTHON=2.7 DEPS=minimal  # pandas
+    - PYTHON=2.7 DEPS=minimal  # edf2asc optional
 
 before_install:
     - if [ "${PYTHON}" != "2.7" ]; then
@@ -23,20 +23,22 @@ before_install:
       else
         travis_retry sudo apt-get -qq update;
       fi;
+    # edf2asc
+    - if [ "${DEPS}" == "full" ]; then
+        echo "deb http://archive.canonical.com/ lucid partner" | sudo tee -a /etc/apt/sources.list;
+        echo "deb http://download.sr-support.com/x64 /" | sudo tee -a /etc/apt/sources.list;
+        travis_retry sudo apt-get update -qq;
+        travis_retry sudo apt-get install -qq -y edf2asc-3.1;
+      fi;
 
 install:
     - if [ "${PYTHON}" != "2.7" ]; then
         conda create -n testenv --yes --quiet pip python=$PYTHON;
         source activate testenv;
-        conda install --yes --quiet scipy nose matplotlib;
-        if [ "${DEPS}" == "full" ]; then
-          conda install --yes --quiet pandas;
-        fi;
+        conda install --yes --quiet pandas scipy nose matplotlib;
       else
         travis_retry sudo apt-get -qq install python-scipy python-nose python-matplotlib;
-        if [ "${DEPS}" == "full" ]; then
-          pip install pandas;
-        fi;
+        pip install pandas;
       fi;
     - pip install -q coveralls nose-timer flake8
     - python setup.py build
