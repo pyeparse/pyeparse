@@ -41,7 +41,7 @@ class Epochs(object):
     """
     def __init__(self, raw, events, event_id, tmin, tmax,
                  ignore_missing=False):
-        if np.isscalar(event_id):
+        if np.isscalar(event_id) and not isinstance(event_id, string_types):
             if event_id != int(event_id):
                 raise RuntimeError('event_id must be an integer')
             event_id = int(event_id)
@@ -382,8 +382,8 @@ class Epochs(object):
 
         out_of_bounds = (indices < 0) | (indices >= len(self.events))
         if out_of_bounds.any():
-            first = indices[out_of_bounds][0]
-            raise IndexError("Epoch index %d is out of bounds" % first)
+            raise IndexError("Epoch index %d is out of bounds"
+                             % indices[out_of_bounds][0])
 
         old_idx = np.delete(np.arange(len(self)), indices)
         self.events = np.delete(self.events, indices, axis=0)

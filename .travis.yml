@@ -11,7 +11,7 @@ env:
     - PYTHON=2.6 DEPS=full
     - PYTHON=2.7 DEPS=full  # note: this runs python-pandas (old version)
     - PYTHON=3.3 DEPS=full
-    - PYTHON=3.3 DEPS=minimal  # edf2asc and pandas optional
+    - PYTHON=3.3 DEPS=minimal  # edf2asc & pandas optional
     - PYTHON=2.7 DEPS=minimal
 
 before_install:

@@ -24,9 +24,11 @@ def test_epochs_deconv():
         raw = Raw(fname)
         epochs = Epochs([raw] * 2, [events_a] * 2, event_dict,
                         tmin, tmax)
+        assert_raises(RuntimeError, Epochs, raw, events_a, 'test', tmin, tmax)
         fit, times = epochs.deconvolve()
         assert_equal(fit.shape, (len(epochs), len(times)))
-        fit, times = epochs.deconvolve(spacing=[-0.1, 0.4, 1.0])
+        fit, times = epochs.deconvolve(spacing=[-0.1, 0.4, 1.0],
+                                       bounds=(0, np.inf))
         assert_equal(fit.shape, (len(epochs), len(times)))
         assert_equal(len(times), 3)
 
@@ -54,6 +56,9 @@ def test_epochs_combine():
         d1 = epochs_1.data
         d2 = epochs_2.data
         assert_array_equal(d1, d2)
+        # this shouldn't really do anything
+        epochs_2.equalize_event_counts(['foobar', 'test'], method='truncate')
+        assert_array_equal(d1, epochs_2.data)
 
 
 def test_epochs_concat():
@@ -110,12 +115,16 @@ def test_epochs_io():
             warnings.simplefilter('always')
             epochs = Epochs(raw, events, missing_event_dict, tmin, tmax,
                             ignore_missing=True)
+        assert_raises(RuntimeError, Epochs, raw, events, 1.1, tmin, tmax)
+        assert_raises(ValueError, Epochs, [raw] * 2, events, event_id,
+                      tmin, tmax)
         assert_equal(len(_filter_warnings(w)), 0)
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter('always')
             epochs = Epochs(raw, events, missing_event_dict, tmin, tmax)
         assert_equal(len(_filter_warnings(w)), 1)
         epochs = Epochs(raw, events, event_id, tmin, tmax)
+        assert_raises(IndexError, epochs.drop_epochs, [1000])
         print(epochs)  # test repr works
         for disc in epochs.info['discretes']:
             assert_equal(len(vars(epochs)[disc]), len(epochs.events))

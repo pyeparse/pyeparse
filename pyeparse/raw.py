@@ -56,8 +56,7 @@ def _parse_pramble(info, preamble_lines):
     for line in preamble_lines:
         if '!MODE'in line:
             line = line.split()
-            info['eye'] = line[-1]
-            info['sfreq'] = float(line[-4])
+            info['eye'], info['sfreq'] = line[-1], float(line[-4])
         elif 'DATE:' in line:
             line = _extract_sys_info(line).strip()
             fmt = '%a %b  %d %H:%M:%S %Y'
@@ -226,8 +225,7 @@ def _read_raw(fname):
                                              calibs=calibs, preamble=preamble,
                                              messages=messages))
                             def_lines, esacc, efix, eblink, calibs, preamble, \
-                                messages = [list() for _ in range(7)]
-                            samples = []
+                                messages, samples = [list() for _ in range(8)]
                         calib_lines = []
                         while True:
                             subline = next(fid)
@@ -370,13 +368,9 @@ class Raw(object):
             idx = (idx,)
         if not isinstance(idx, tuple):
             raise TypeError('index must be a string, slice, or tuple')
-
         if isinstance(idx[0], string_types):
-            if idx[0] not in self.info['sample_fields']:
-                raise KeyError('string idx "%s" must be one of %s'
-                               % (idx, self.info['sample_fields']))
             idx = list(idx)
-            idx[0] = self.info['sample_fields'].index(idx[0])
+            idx[0] = self._di(idx[0])
             idx = tuple(idx)
         if len(idx) > 2:
             raise ValueError('indices must have at most two elements')
