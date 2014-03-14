@@ -15,7 +15,6 @@ env:
     - PYTHON=2.7 DEPS=minimal
 
 before_install:
-    - travis_retry sudo apt-get -qq update;
     - if [ "${PYTHON}" != "2.7" ]; then
         wget http://repo.continuum.io/miniconda/Miniconda-2.2.2-Linux-x86_64.sh -O miniconda.sh;
         chmod +x miniconda.sh;
@@ -26,6 +25,7 @@ before_install:
 
 install:
     - if [ "${PYTHON}" == "2.7" ]; then
+        travis_retry sudo apt-get -qq update;
         travis_retry sudo apt-get -qq install python-scipy python-nose python-matplotlib;
       else
         conda create -n testenv --yes --quiet pip python=$PYTHON;
@@ -36,10 +36,10 @@ install:
     - if [ "${DEPS}" == "full" ]; then
         echo "deb http://archive.canonical.com/ lucid partner" | sudo tee -a /etc/apt/sources.list;
         echo "deb http://download.sr-support.com/x64 /" | sudo tee -a /etc/apt/sources.list;
-        travis_retry sudo apt-get update -qq;
-        travis_retry sudo apt-get install -qq -y --force-yes edf2asc-3.1;
+        travis_retry sudo apt-get -qq update;
+        travis_retry sudo apt-get -qq install -y --force-yes edf2asc-3.1;
         if [ "${PYTHON}" == "2.7" ]; then
-          sudo apt-get install python-pandas;
+          travis_retry sudo apt-get -qq install python-pandas;
         else
           conda install --yes --quiet pandas;
         fi;
@@ -72,3 +72,4 @@ script:
 after_success:
     # Need to run from source dir to execute appropriate "git" commands
     - coveralls;
+
