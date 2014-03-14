@@ -3,41 +3,16 @@
 # License: BSD (3-clause)
 
 import numpy as np
-import pandas as pd
 from datetime import datetime
-try:
-    from cStringIO import StringIO as sio
-except ImportError:  # py3 has renamed this
-    from io import StringIO as sio  # noqa
+from os import path as op
 
 from .constants import EDF
 from .event import find_events
-from .utils import check_line_index, safe_bool, next
+from .utils import raw_open
+from ._py23 import next, string_types
+from ._py23 import StringIO as sio
+from ._py23 import BytesIO as bio
 from .viz import plot_calibration, plot_heatmap_raw
-
-
-def _assemble_data(lines, columns, sep='[ \t]+', na_values=['.']):
-    """Aux function"""
-    return pd.read_table(sio(''.join(lines)), names=columns, sep=sep,
-                         na_values=na_values)
-
-
-def _assemble_messages(lines):
-    """Aux function for dealing with messages (sheesh)"""
-    msgs = list()
-    times = list()
-    for line in lines:
-        line = line.strip().split(None, 2)
-        assert line[0] == 'MSG'
-        times.append(float(line[1]))
-        msgs.append(line[2])
-    times = np.array(times)
-    msgs = np.array(msgs, dtype='O')
-    assert len(EDF.MESSAGE_FIELDS) == 2
-    data_dict = {}
-    for key, val in zip(EDF.MESSAGE_FIELDS, [times, msgs]):
-        data_dict[key] = val
-    return pd.DataFrame(data_dict, columns=EDF.MESSAGE_FIELDS)
 
 
 def _extract_sys_info(line):
@@ -81,8 +56,7 @@ def _parse_pramble(info, preamble_lines):
     for line in preamble_lines:
         if '!MODE'in line:
             line = line.split()
-            info['eye'] = line[-1]
-            info['sfreq'] = float(line[-4])
+            info['eye'], info['sfreq'] = line[-1], float(line[-4])
         elif 'DATE:' in line:
             line = _extract_sys_info(line).strip()
             fmt = '%a %b  %d %H:%M:%S %Y'
@@ -119,6 +93,7 @@ def _parse_calibration(info, calib_lines):
     """Parse EL header information"""
     validations = list()
     lines = iter(calib_lines)
+    keys = ['point-x', 'point-y', 'offset', 'diff-x', 'diff-y']
     for line in lines:
         if '!CAL VALIDATION ' in line and not 'ABORTED' in line:
             cal_kind = line.split('!CAL VALIDATION ')[1].split()[0]
@@ -129,11 +104,10 @@ def _parse_calibration(info, calib_lines):
                 subline = next(lines).split()
                 xy = subline[-6].split(',')
                 xy_diff = subline[-2].split(',')
-                this_validation.append({'point-x': xy[0],
-                                        'point-y': xy[1],
-                                        'offset': subline[-4],
-                                        'diff-x': xy_diff[0],
-                                        'diff-y': xy_diff[1]})
+                vals = [float(v) for v in [xy[0], xy[1], subline[-4],
+                                           xy_diff[0], xy_diff[1]]]
+                this_validation.append(vals)
+            this_validation = np.array(this_validation).T
             validations.append(this_validation)
         elif any([k in line for k in EDF.MLINES]):
             additional_lines = []
@@ -149,8 +123,13 @@ def _parse_calibration(info, calib_lines):
         elif 'DISPLAY_COORDS' in line:
             info['screen_coords'] = np.array(line.split()[-2:],
                                              dtype='i8')
-
-    return validations[-1]
+    if len(validations) > 0:
+        out = dict()
+        for key, val in zip(keys, validations[-1]):
+            out[key] = val
+    else:
+        out = validations
+    return out
 
 
 def _parse_put_event_format(info, def_lines):
@@ -167,7 +146,7 @@ def _parse_put_event_format(info, def_lines):
 
     for line in def_lines:
         extra, eye, sfreq, track, filt = _get_fields(line)
-        if line[:7] == 'SAMPLES':
+        if line.startswith('SAMPLES'):
             fields = ['time', 'xpos', 'ypos', 'ps']
             key = 'sample_fields'
         else:
@@ -187,55 +166,35 @@ def _parse_put_event_format(info, def_lines):
         info[key] = fields
     info['saccade_fields'] = saccade_fields
     info['fixation_fields'] = fixation_fields
+    info['blink_fields'] = EDF.BLINK_FIELDS
     info['discretes'] = []
 
 
-def _merge_run_data(run1, run2):
-    """Merge two runs -- use with reduce"""
-    if run1[2]['sfreq'] != run2[2]['sfreq']:
-        raise RuntimeError('Sample frequencies differ across runs')
-    if safe_bool(run1[0].columns != run2[0].columns):
-        raise RuntimeError('Sample columns differ across runs')
-    sfreq = run1[2]['sfreq']
-    offset = run1[0]['time'].values[-1] + (1. / sfreq)
-    run2[0]['time'] += offset
-    samples = pd.concat([run1[0], run2[0]], ignore_index=True)
-    diff = np.diff(samples.time.values)
-    diff = np.ma.masked_invalid(diff).astype(np.int64)
-    diff = np.unique(diff)
-    if len(diff) > 1:
-        raise RuntimeError('Could not concatenate runs')
-    discrete = {}
-    for ((kind1, data1), (kind2, data2)) in zip(run1[1].items(),
-                                                run2[1].items()):
-        if 'stime' in data2:
-            data2['stime'] += offset
-            data2['etime'] += offset
-        elif 'time' in data2:
-            data2['time'] += offset
-        discrete.update({kind1: pd.concat([data1, data2],
-                                          ignore_index=True)})
-    info = run1[2]  # let's keep it simple for the moment and assume
-                    # infos don't differ
-    info['calibration'] = [i['calibration'] for i in [run1[2], run2[2]]]
-    return [samples, discrete, info]
+def _read_samples_strings(samples):
+    """Triage sample interpretation using Pandas or Numpy"""
+    try:
+        import pandas as pd
+    except Exception:
+        samples = bio(''.join(samples).encode('utf-8'))
+        data = np.genfromtxt(samples, dtype=np.float64).T
+    else:
+        samples = sio(''.join(samples))
+        data = pd.read_table(samples, sep='[ \t]+',
+                             na_values=['.', '...']).values.T.copy()
+    samples.close()
+    return data
 
 
-class Raw(object):
-    """ Represent EyeLink 1000 ASCII files in Python
-
-    Parameters
-    ----------
-    fname : str
-        The name of the ASCII converted EDF file.
-    """
-    def __init__(self, fname):
-
-        def_lines, samples, esacc, efix, eblink, calibs, preamble, \
-            messages = [list() for _ in range(8)]
+def _read_raw(fname):
+        def_lines, esacc, efix, eblink, calibs, preamble, messages = \
+            [list() for _ in range(7)]
+        samples = []
         started = False
+        event_types = ['saccades', 'fixations', 'blinks']
         runs = []
-        with open(fname, 'r') as fid:
+        if not op.isfile(fname):
+            raise IOError('file "%s" not found' % fname)
+        with raw_open(fname) as fid:
             for line in fid:
                 if line[0] in ['#/;']:  # comment line, ignore it
                     continue
@@ -244,21 +203,18 @@ class Raw(object):
                         preamble.append(line)
                     else:
                         started = True
-                        continue  # don't parse empty  line
-
-                if started:
+                else:
                     if line[0].isdigit():
                         samples.append(line)
-                    elif EDF.CODE_ESAC == line[:len(EDF.CODE_ESAC)]:
-                        # deal with old pandas version, add an index.
+                    elif line.startswith(EDF.CODE_ESAC):
                         esacc.append(line)
-                    elif EDF.CODE_EFIX == line[:len(EDF.CODE_EFIX)]:
+                    elif line.startswith(EDF.CODE_EFIX):
                         efix.append(line)
-                    elif EDF.CODE_EBLINK in line[:len(EDF.CODE_EBLINK)]:
+                    elif line.startswith(EDF.CODE_EBLINK):
                         eblink.append(line)
-                    elif 'MSG' == line[:3]:
+                    elif line.startswith('MSG'):
                         messages.append(line)
-                    elif 'CALIBRATION' in line and line.startswith('>'):
+                    elif line.startswith('>') and 'CALIBRATION' in line:
                         # Add another calibration section, set split for
                         # raw parser
                         if samples:
@@ -268,9 +224,8 @@ class Raw(object):
                                              eblink=eblink,
                                              calibs=calibs, preamble=preamble,
                                              messages=messages))
-                            def_lines, samples, esacc, efix, eblink, calibs, \
-                                preamble, \
-                                messages = [list() for _ in range(8)]
+                            def_lines, esacc, efix, eblink, calibs, preamble, \
+                                messages, samples = [list() for _ in range(8)]
                         calib_lines = []
                         while True:
                             subline = next(fid)
@@ -287,9 +242,9 @@ class Raw(object):
                         pass
                     elif EDF.CODE_SBLINK == line[:len(EDF.CODE_SBLINK)]:
                         pass
-                    elif 'END' == line[:3]:
+                    elif line.startswith('END'):
                         pass
-                    elif 'INPUT' == line[:5]:
+                    elif line.startswith('INPUT'):
                         pass
                     else:
                         raise RuntimeError('data not understood: "%s"'
@@ -306,93 +261,138 @@ class Raw(object):
             else:
                 assert all([k == values[0] for k in values[1:]])
         # parse the header
-        info_runs, samples_runs, discrete_runs = [], [], []
+        samples_runs, discrete_runs = [], []
+        discrete = dict()
+        fs = None
+        info = None
+        _t_zero = None
+        offset = 0
+        assert len(runs) > 0
         for ii, run in enumerate(runs):
-            info = {}
+            this_info = dict(calibration=list())
             if run['preamble']:
-                _parse_pramble(info, run['preamble'])
+                _parse_pramble(this_info, run['preamble'])
 
-            _parse_def_lines(info, run['def_lines'])
-            if not all([x in info
+            _parse_def_lines(this_info, run['def_lines'])
+            if not all([x in this_info
                         for x in ['sample_fields', 'event_fields']]):
                 raise RuntimeError('could not parse header')
-
             if run['calibs']:
-                validation = _parse_calibration(info, run['calibs'])
-                df = pd.DataFrame(validation, dtype=np.float64)
-                info['calibration'] = df
-                if 'sample_fields' not in info:
-                    _parse_put_event_format(info, run['def_lines'])
-            samples = _assemble_data(run['samples'],
-                                     columns=info['sample_fields'])
-            del run['samples']
-            discrete = {}
-            kind_str = ['saccades', 'fixations', 'blinks']
-            kind_list = [run['esacc'], run['efix'], run['eblink']]
-            column_list = [info['saccade_fields'],
-                           info['fixation_fields'],
-                           EDF.BLINK_FIELDS]
-            for s, kind, cols in zip(kind_str, kind_list, column_list):
-                discrete[s] = _assemble_data(check_line_index(kind),
-                                             columns=cols)
-            discrete['messages'] = _assemble_messages(run['messages'])
-
-            is_unique = len(samples['time'].unique()) == len(samples)
-            if not is_unique:
-                raise RuntimeError('The time stamp found has non-unique '
-                                   'values. Please check your conversion '
-                                   'settings and make sure not to use the '
-                                   'float option.')
-
-            # set t0 to 0 and scale to seconds
-            _t_zero = samples['time'][0]
-            samples['time'] -= _t_zero
-            samples['time'] /= 1e3
-            discrete['messages']['time'] -= _t_zero
-            discrete['messages']['time'] /= 1e3
-            info['event_types'] = []
-            for kind in ['saccades', 'fixations', 'blinks']:
-                df = discrete.get(kind, None)
-                if df is not None:
-                    df[['stime', 'etime']] -= _t_zero
-                    df[['stime', 'etime', 'dur']] /= 1e3
-                    info['event_types'].append(kind)
-            if ii < 1:
-                self._t_zero = _t_zero
-            df = samples
-            info['data_cols'] = [kk for kk, dt in zip(df.columns, df.dtypes)
-                                 if dt != 'O' and kk != 'time']
-            info_runs.append(info)
-            discrete_runs.append(discrete)
+                validation = _parse_calibration(this_info, run['calibs'])
+                this_info['calibration'] = [validation]
+                if 'sample_fields' not in this_info:
+                    _parse_put_event_format(this_info, run['def_lines'])
+            if info is None:
+                info = this_info
+                info['event_types'] = event_types
+            else:
+                info['calibration'] += this_info['calibration']
+            fs = info['sfreq']
+            assert fs == this_info['sfreq']
+            samples = _read_samples_strings(run['samples'])
+            assert len(np.unique(samples[0])) == samples.shape[1]
+            this_t_zero = samples[0, 0]
+            if _t_zero is None:
+                _t_zero = this_t_zero
+            samples[0] -= this_t_zero
+            samples[0] /= 1e3
+            samples += offset
             samples_runs.append(samples)
 
-        assert len(samples_runs) == len(discrete_runs) == len(info_runs)
-        if len(samples_runs) == 1:
-            self.info = info_runs[0]
-            self.samples = samples_runs[0]
-            self.discrete = discrete_runs[0]
-        else:
-            one_run = None
-            # instead of using "reduce"
-            for run in zip(samples_runs, discrete_runs, info_runs):
-                if one_run is None:
-                    one_run = run
-                else:
-                    one_run = _merge_run_data(one_run, run)
-            self.samples, self.discrete, self.info = one_run
-        self.info['fname'] = fname
+            # parse discretes
+            this_discrete = {}
+            kind_list = [run['esacc'], run['efix'], run['eblink']]
+            for s, kind in zip(event_types, kind_list):
+                d = np.genfromtxt(bio(''.join(kind).encode('utf-8')),
+                                  dtype=None)
+                disc = dict()
+                for ii, key in enumerate(info[s[:-1] + '_fields']):
+                    disc[key] = d['f%s' % (ii + 1)]  # first field is junk
+                for key in ('stime', 'etime'):
+                    disc[key] = (disc[key] - this_t_zero) / 1e3 + offset
+                assert np.all(disc['stime'] < disc['etime'])
+                this_discrete[s] = disc
+
+            # parse messages
+            times = list()
+            msgs = list()
+            for message in run['messages']:
+                x = message.strip().split(None, 2)
+                assert x[0] == 'MSG'
+                times.append(x[1])
+                msgs.append(x[2])
+            times = (np.array(times, np.float64) - this_t_zero) / 1e3 + offset
+            msgs = np.array(msgs, dtype='O')
+            this_discrete['messages'] = dict(time=times, msg=msgs)
+            discrete_runs.append(this_discrete)
+
+            # set offset for next group
+            offset += samples[0, -1] + 1. / fs
+
+        # combine all fields
+        for kind in (event_types + ['messages']):
+            discrete[kind] = dict()
+            for col in discrete_runs[0][kind].keys():
+                concat = np.concatenate([d[kind][col]
+                                         for d in discrete_runs])
+                discrete[kind][col] = concat
+        samples = np.concatenate(samples_runs, axis=1)
+        info['sample_fields'] = info['sample_fields'][1:]
+        return info, discrete, samples[0], samples[1:], _t_zero
+
+
+class Raw(object):
+    """ Represent EyeLink 1000 ASCII files in Python
+
+    Parameters
+    ----------
+    fname : str
+        The name of the ASCII converted EDF file.
+    """
+    def __init__(self, fname):
+        info, discrete, times, samples, t_zero = _read_raw(fname)
+        self.info = info
+        self.discrete = discrete
+        self._times = times
+        self._samples = samples
+        self._t_zero = t_zero
+        assert self._samples.shape[0] == len(self.info['sample_fields'])
 
     def __repr__(self):
-        return '<Raw | {0} samples>'.format(len(self.samples))
+        return '<Raw | {0} samples>'.format(self.n_samples)
 
     def __getitem__(self, idx):
-        df = self.samples
-        data = df[self.info['data_cols']].values[idx]
-        return np.atleast_2d(data), np.atleast_1d(df['time'].values[idx])
+        if isinstance(idx, string_types):
+            idx = (idx,)
+        elif isinstance(idx, slice):
+            idx = (idx,)
+        if not isinstance(idx, tuple):
+            raise TypeError('index must be a string, slice, or tuple')
+        if isinstance(idx[0], string_types):
+            idx = list(idx)
+            idx[0] = self._di(idx[0])
+            idx = tuple(idx)
+        if len(idx) > 2:
+            raise ValueError('indices must have at most two elements')
+        elif len(idx) == 1:
+            idx = (idx[0], slice(None))
+        data = self._samples[idx]
+        times = self.times[idx[1:]]
+        return data, times
+
+    def _di(self, key):
+        """Helper to get the sample dict index"""
+        if key not in self.info['sample_fields']:
+            raise KeyError('key "%s" not in sample fields %s'
+                           % (key, self.info['sample_fields']))
+        return self.info['sample_fields'].index(key)
 
     @property
     def n_samples(self):
-        return len(self.samples)
+        return len(self.times)
+
+    def __len__(self):
+        return self.n_samples
 
     def plot_calibration(self, title='Calibration', show=True):
         """Visualize calibration
@@ -435,6 +435,10 @@ class Raw(object):
         plot_heatmap_raw(raw=self, start=start, stop=stop, cmap=cmap,
                          title=title, kernel=kernel, colorbar=colorbar,
                          show=show)
+
+    @property
+    def times(self):
+        return self._times
 
     def time_as_index(self, times):
         """Convert time to indices
@@ -505,9 +509,9 @@ class Raw(object):
         borders = np.array(borders)
         if borders.size == 1:
             borders == np.array([borders, borders])
-        blinks = self.discrete['blinks']['stime'].values
-        starts = self.discrete['saccades']['stime'].values
-        ends = self.discrete['saccades']['etime'].values
+        blinks = self.discrete['blinks']['stime']
+        starts = self.discrete['saccades']['stime']
+        ends = self.discrete['saccades']['etime']
         # only use saccades that enclose a blink
         if use_only_blink:
             use = np.searchsorted(ends, blinks)
@@ -526,12 +530,12 @@ class Raw(object):
         assert len(starts) == len(ends)
         for stime, etime in zip(starts, ends):
             sidx, eidx = self.time_as_index([stime, etime])
-            vals = self.samples['ps'][sidx:eidx].values
+            vals = self['ps', sidx:eidx][0]
             if interp is None:
                 fix = np.nan
             elif interp == 'zoh':
-                fix = self.samples['ps'][sidx]
+                fix = vals[0]
             elif interp == 'linear':
                 len_ = eidx - sidx
                 fix = np.linspace(vals[0], vals[-1], len_)
-            self.samples['ps'][sidx:eidx] = fix
+            vals[:] = fix

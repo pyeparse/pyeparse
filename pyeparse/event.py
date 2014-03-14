@@ -4,7 +4,7 @@
 
 import re
 import numpy as np
-from .utils import safe_bool, string_types
+from .utils import string_types, raw_open
 
 
 class Discrete(list):
@@ -16,7 +16,7 @@ class Discrete(list):
 
     def __repr__(self):
         s = '<Discrete | {0} epochs; {1} events>'
-        return s.format(len(self), sum(len(d) for d in self if safe_bool(d)))
+        return s.format(len(self), sum(len(d) for d in self if d is not None))
 
 
 def find_events(raw, pattern, event_id):
@@ -38,20 +38,22 @@ def find_events(raw, pattern, event_id):
         The indices found.
     """
     df = raw.discrete.get('messages', None)
-    if safe_bool(df):
+    if df is not None:
         if callable(pattern):
             func = pattern
         elif isinstance(pattern, string_types):
             func = lambda x: pattern in x
         else:
             raise ValueError('Pattern not valid. Pass string or function')
-        my_bool = df.msg.map(func)
-        out = raw.time_as_index(df['time'].ix[my_bool.nonzero()[0]])
+        idx = np.array([func(msg) for msg in df['msg']])
+        out = raw.time_as_index(df['time'][idx])
         id_vector = np.repeat(event_id, len(out)).astype(np.int64)
         return np.c_[out, id_vector]
+    else:
+        return np.zeros((0, 2), dtype=np.int64)
 
 
-def find_custom_events(raw, pattern, event_id, prefix=True, sep='\W+',
+def find_custom_events(raw, fname, pattern, event_id, prefix=True, sep='\W+',
                        return_residuals=False):
     """Find arbitrary messages from raw data file
 
@@ -59,6 +61,10 @@ def find_custom_events(raw, pattern, event_id, prefix=True, sep='\W+',
     ----------
     raw : instance of pyeparse.raw.Raw
         the raw file to find events in.
+    fname : str
+        The filename for the data file to search. This must be provided
+        because the data stored in ``raw`` has been converted from the
+        original format (and thus cannot be traversed).
     pattern : str
         A substring to be matched (using regular expressions).
     event_id : int
@@ -81,7 +87,7 @@ def find_custom_events(raw, pattern, event_id, prefix=True, sep='\W+',
     residuals = []
 
     idx = 1 if prefix else 0
-    with open(raw.info['fname']) as fid:
+    with raw_open(fname) as fid:
         for line in fid:
             if len(re.findall(pattern, line)) > 0:
                 event = re.split(sep, line)

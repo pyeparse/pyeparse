@@ -1,5 +1,4 @@
 import numpy as np
-import pandas as pd
 import warnings
 from os import path as op
 from nose.tools import assert_true
@@ -16,7 +15,7 @@ fname = op.join(op.dirname(__file__), 'data', 'test_raw.asc')
 def test_find_custom_events():
     """Test finding user-defined events"""
     raw = Raw(fname)
-    events = find_custom_events(raw, 'user-event', 1)
+    events = find_custom_events(raw, fname, 'user-event', 1)
     assert_equal(len(events), 24)
     assert_equal(set(events[:, 1]), set([1]))
     events2 = raw.find_events('user-event', 1)
@@ -29,7 +28,7 @@ def test_find_custom_events():
 def test_discrete():
     """Test discrete events container"""
     dis = Discrete()
-    dis.extend([np.array([1]), pd.DataFrame(), 'aaaa'])
+    dis.extend([np.array([1]), 'aaaa'])
     myrepr = '%s' % dis
     checksum = sum([int(d) for d in myrepr if d.isdigit()])
     assert_equal(checksum, 5 + len(dis))
