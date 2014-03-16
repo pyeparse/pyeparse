@@ -23,9 +23,9 @@ def create_constants(var_val_dict):
     # They will be read and a constants dict with var_name:var_val 
     # and var_val:var_name will be created abd returned
 
-    constants = dict([(key, val) for key, val in dict(var_val_dict).iteritems()
+    constants = dict([(key, val) for key, val in dict(var_val_dict).items()
                       if (not key.startswith("_") and not callable(val))])
-    constants.update([(val, key) for key, val in dict(constants).iteritems()])
+    constants.update([(val, key) for key, val in dict(constants).items()])
     return constants
 
 

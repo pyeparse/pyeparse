@@ -1,17 +1,18 @@
 '''Wrapper for edf.h
 
 Generated with:
-ctypesgen.py --insert-file edf2py_extra.py --cpp=cl -EP -a -l edfapi -o edf2py.py edf.h
+ctypesgen.py --insert-file edf2py_extra.py --cpp=cl -EP -a -l edfapi -o
+edf2py.py edf.h
 
 Do not modify this file.
 '''
 
-__docformat__ =  'restructuredtext'
+__docformat__ = 'restructuredtext'
 
 # Begin preamble
 
-import ctypes, os, sys
 from ctypes import *
+import ctypes, sys, os
 
 _int_types = (c_int16, c_int32)
 if hasattr(ctypes, 'c_int64'):
@@ -25,11 +26,13 @@ for t in _int_types:
 del t
 del _int_types
 
+
 class c_void(Structure):
     # c_void_p is a buggy return type, converting to int, so
     # POINTER(None) == c_void_p is actually written as
     # POINTER(c_void), so it can be treated as a real pointer.
     _fields_ = [('dummy', c_int)]
+
 
 def POINTER(obj):
     p = ctypes.POINTER(obj)
@@ -42,9 +45,11 @@ def POINTER(obj):
                 return cls()
             else:
                 return x
+
         p.from_param = classmethod(from_param)
 
     return p
+
 
 class UserString:
     def __init__(self, seq):
@@ -54,26 +59,46 @@ class UserString:
             self.data = seq.data[:]
         else:
             self.data = str(seq)
-    def __str__(self): return str(self.data)
-    def __repr__(self): return repr(self.data)
-    def __int__(self): return int(self.data)
-    def __long__(self): return long(self.data)
-    def __float__(self): return float(self.data)
-    def __complex__(self): return complex(self.data)
-    def __hash__(self): return hash(self.data)
+
+    def __str__(self):
+        return str(self.data)
+
+    def __repr__(self):
+        return repr(self.data)
+
+    def __int__(self):
+        return int(self.data)
+
+    def __long__(self):
+        return long(self.data)
+
+    def __float__(self):
+        return float(self.data)
+
+    def __complex__(self):
+        return complex(self.data)
+
+    def __hash__(self):
+        return hash(self.data)
 
     def __cmp__(self, string):
         if isinstance(string, UserString):
             return cmp(self.data, string.data)
         else:
             return cmp(self.data, string)
+
     def __contains__(self, char):
         return char in self.data
 
-    def __len__(self): return len(self.data)
-    def __getitem__(self, index): return self.__class__(self.data[index])
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, index):
+        return self.__class__(self.data[index])
+
     def __getslice__(self, start, end):
-        start = max(start, 0); end = max(end, 0)
+        start = max(start, 0)
+        end = max(end, 0)
         return self.__class__(self.data[start:end])
 
     def __add__(self, other):
@@ -83,24 +108,32 @@ class UserString:
             return self.__class__(self.data + other)
         else:
             return self.__class__(self.data + str(other))
+
     def __radd__(self, other):
         if isinstance(other, basestring):
             return self.__class__(other + self.data)
         else:
             return self.__class__(str(other) + self.data)
+
     def __mul__(self, n):
-        return self.__class__(self.data*n)
+        return self.__class__(self.data * n)
+
     __rmul__ = __mul__
+
     def __mod__(self, args):
         return self.__class__(self.data % args)
 
     # the following methods are defined in alphabetical order:
-    def capitalize(self): return self.__class__(self.data.capitalize())
+    def capitalize(self):
+        return self.__class__(self.data.capitalize())
+
     def center(self, width, *args):
         return self.__class__(self.data.center(width, *args))
+
     def count(self, sub, start=0, end=sys.maxint):
         return self.data.count(sub, start, end)
-    def decode(self, encoding=None, errors=None): # XXX improve this?
+
+    def decode(self, encoding=None, errors=None):  # XXX improve this?
         if encoding:
             if errors:
                 return self.__class__(self.data.decode(encoding, errors))
@@ -108,7 +141,8 @@ class UserString:
                 return self.__class__(self.data.decode(encoding))
         else:
             return self.__class__(self.data.decode())
-    def encode(self, encoding=None, errors=None): # XXX improve this?
+
+    def encode(self, encoding=None, errors=None):  # XXX improve this?
         if encoding:
             if errors:
                 return self.__class__(self.data.encode(encoding, errors))
@@ -116,55 +150,109 @@ class UserString:
                 return self.__class__(self.data.encode(encoding))
         else:
             return self.__class__(self.data.encode())
+
     def endswith(self, suffix, start=0, end=sys.maxint):
         return self.data.endswith(suffix, start, end)
+
     def expandtabs(self, tabsize=8):
         return self.__class__(self.data.expandtabs(tabsize))
+
     def find(self, sub, start=0, end=sys.maxint):
         return self.data.find(sub, start, end)
+
     def index(self, sub, start=0, end=sys.maxint):
         return self.data.index(sub, start, end)
-    def isalpha(self): return self.data.isalpha()
-    def isalnum(self): return self.data.isalnum()
-    def isdecimal(self): return self.data.isdecimal()
-    def isdigit(self): return self.data.isdigit()
-    def islower(self): return self.data.islower()
-    def isnumeric(self): return self.data.isnumeric()
-    def isspace(self): return self.data.isspace()
-    def istitle(self): return self.data.istitle()
-    def isupper(self): return self.data.isupper()
-    def join(self, seq): return self.data.join(seq)
+
+    def isalpha(self):
+        return self.data.isalpha()
+
+    def isalnum(self):
+        return self.data.isalnum()
+
+    def isdecimal(self):
+        return self.data.isdecimal()
+
+    def isdigit(self):
+        return self.data.isdigit()
+
+    def islower(self):
+        return self.data.islower()
+
+    def isnumeric(self):
+        return self.data.isnumeric()
+
+    def isspace(self):
+        return self.data.isspace()
+
+    def istitle(self):
+        return self.data.istitle()
+
+    def isupper(self):
+        return self.data.isupper()
+
+    def join(self, seq):
+        return self.data.join(seq)
+
     def ljust(self, width, *args):
         return self.__class__(self.data.ljust(width, *args))
-    def lower(self): return self.__class__(self.data.lower())
-    def lstrip(self, chars=None): return self.__class__(self.data.lstrip(chars))
+
+    def lower(self):
+        return self.__class__(self.data.lower())
+
+    def lstrip(self, chars=None):
+        return self.__class__(self.data.lstrip(chars))
+
     def partition(self, sep):
         return self.data.partition(sep)
+
     def replace(self, old, new, maxsplit=-1):
         return self.__class__(self.data.replace(old, new, maxsplit))
+
     def rfind(self, sub, start=0, end=sys.maxint):
         return self.data.rfind(sub, start, end)
+
     def rindex(self, sub, start=0, end=sys.maxint):
         return self.data.rindex(sub, start, end)
+
     def rjust(self, width, *args):
         return self.__class__(self.data.rjust(width, *args))
+
     def rpartition(self, sep):
         return self.data.rpartition(sep)
-    def rstrip(self, chars=None): return self.__class__(self.data.rstrip(chars))
+
+    def rstrip(self, chars=None):
+        return self.__class__(self.data.rstrip(chars))
+
     def split(self, sep=None, maxsplit=-1):
         return self.data.split(sep, maxsplit)
+
     def rsplit(self, sep=None, maxsplit=-1):
         return self.data.rsplit(sep, maxsplit)
-    def splitlines(self, keepends=0): return self.data.splitlines(keepends)
+
+    def splitlines(self, keepends=0):
+        return self.data.splitlines(keepends)
+
     def startswith(self, prefix, start=0, end=sys.maxint):
         return self.data.startswith(prefix, start, end)
-    def strip(self, chars=None): return self.__class__(self.data.strip(chars))
-    def swapcase(self): return self.__class__(self.data.swapcase())
-    def title(self): return self.__class__(self.data.title())
+
+    def strip(self, chars=None):
+        return self.__class__(self.data.strip(chars))
+
+    def swapcase(self):
+        return self.__class__(self.data.swapcase())
+
+    def title(self):
+        return self.__class__(self.data.title())
+
     def translate(self, *args):
         return self.__class__(self.data.translate(*args))
-    def upper(self): return self.__class__(self.data.upper())
-    def zfill(self, width): return self.__class__(self.data.zfill(width))
+
+    def upper(self):
+        return self.__class__(self.data.upper())
+
+    def zfill(self, width):
+        return self.__class__(self.data.zfill(width))
+
 
 class MutableString(UserString):
     """mutable string objects
@@ -181,33 +269,43 @@ class MutableString(UserString):
     errors that would be very hard to track down.
 
     A faster and better solution is to rewrite your program using lists."""
+
     def __init__(self, string=""):
         self.data = string
+
     def __hash__(self):
         raise TypeError("unhashable type (it is mutable)")
+
     def __setitem__(self, index, sub):
         if index < 0:
             index += len(self.data)
         if index < 0 or index >= len(self.data): raise IndexError
-        self.data = self.data[:index] + sub + self.data[index+1:]
+        self.data = self.data[:index] + sub + self.data[index + 1:]
+
     def __delitem__(self, index):
         if index < 0:
             index += len(self.data)
         if index < 0 or index >= len(self.data): raise IndexError
-        self.data = self.data[:index] + self.data[index+1:]
+        self.data = self.data[:index] + self.data[index + 1:]
+
     def __setslice__(self, start, end, sub):
-        start = max(start, 0); end = max(end, 0)
+        start = max(start, 0)
+        end = max(end, 0)
         if isinstance(sub, UserString):
-            self.data = self.data[:start]+sub.data+self.data[end:]
+            self.data = self.data[:start] + sub.data + self.data[end:]
         elif isinstance(sub, basestring):
-            self.data = self.data[:start]+sub+self.data[end:]
+            self.data = self.data[:start] + sub + self.data[end:]
         else:
-            self.data =  self.data[:start]+str(sub)+self.data[end:]
+            self.data = self.data[:start] + str(sub) + self.data[end:]
+
     def __delslice__(self, start, end):
-        start = max(start, 0); end = max(end, 0)
+        start = max(start, 0)
+        end = max(end, 0)
         self.data = self.data[:start] + self.data[end:]
+
     def immutable(self):
         return UserString(self.data)
+
     def __iadd__(self, other):
         if isinstance(other, UserString):
             self.data += other.data
@@ -216,12 +314,13 @@ class MutableString(UserString):
         else:
             self.data += str(other)
         return self
+
     def __imul__(self, n):
         self.data *= n
         return self
 
-class String(MutableString, Union):
 
+class String(MutableString, Union):
     _fields_ = [('raw', POINTER(c_char)),
                 ('data', c_char_p)]
 
@@ -262,10 +361,13 @@ class String(MutableString, Union):
         # Convert from object
         else:
             return String.from_param(obj._as_parameter_)
+
     from_param = classmethod(from_param)
+
 
 def ReturnString(obj, func=None, arguments=None):
     return String.from_param(obj)
+
 
 # As of ctypes 1.0, ctypes does not support custom error-checking
 # functions on callbacks, nor does it support custom datatypes on
@@ -281,24 +383,27 @@ def UNCHECKED(type):
     else:
         return c_void_p
 
+
 # ctypes doesn't have direct support for variadic functions, so we have to write
 # our own wrapper class
 class _variadic_function(object):
-    def __init__(self,func,restype,argtypes):
-        self.func=func
-        self.func.restype=restype
-        self.argtypes=argtypes
+    def __init__(self, func, restype, argtypes):
+        self.func = func
+        self.func.restype = restype
+        self.argtypes = argtypes
+
     def _as_parameter_(self):
         # So we can pass this variadic function as a function pointer
         return self.func
-    def __call__(self,*args):
-        fixed_args=[]
-        i=0
+
+    def __call__(self, *args):
+        fixed_args = []
+        i = 0
         for argtype in self.argtypes:
             # Typecheck what we can
             fixed_args.append(argtype.from_param(args[i]))
-            i+=1
-        return self.func(*fixed_args+list(args[i:]))
+            i += 1
+        return self.func(*fixed_args + list(args[i:]))
 
 # End preamble
 
@@ -341,9 +446,10 @@ _libdirs = []
 # POSSIBILITY OF SUCH DAMAGE.
 # ----------------------------------------------------------------------------
 
-import os.path, re, sys, glob
+import re, sys, glob
 import ctypes
 import ctypes.util
+
 
 def _environ_path(name):
     if name in os.environ:
@@ -351,11 +457,12 @@ def _environ_path(name):
     else:
         return []
 
+
 class LibraryLoader(object):
     def __init__(self):
-        self.other_dirs=[]
+        self.other_dirs = []
 
-    def load_library(self,libname):
+    def load_library(self, libname):
         """Given the name of a library, load it."""
         paths = self.getpaths(libname)
 
@@ -365,7 +472,7 @@ class LibraryLoader(object):
 
         raise ImportError("%s not found." % libname)
 
-    def load(self,path):
+    def load(self, path):
         """Given a path to a library, load it."""
         try:
             # Darwin requires dlopen to be called with mode RTLD_GLOBAL instead
@@ -376,10 +483,10 @@ class LibraryLoader(object):
                 return ctypes.CDLL(path, ctypes.RTLD_GLOBAL)
             else:
                 return ctypes.cdll.LoadLibrary(path)
-        except OSError,e:
+        except OSError, e:
             raise ImportError(e)
 
-    def getpaths(self,libname):
+    def getpaths(self, libname):
         """Return a list of paths where the library might be found."""
         if os.path.isabs(libname):
             yield libname
@@ -394,13 +501,14 @@ class LibraryLoader(object):
     def getplatformpaths(self, libname):
         return []
 
+
 # Darwin (Mac OS X)
 
 class DarwinLibraryLoader(LibraryLoader):
     name_formats = ["lib%s.dylib", "lib%s.so", "lib%s.bundle", "%s.dylib",
-                "%s.so", "%s.bundle", "%s"]
+                    "%s.so", "%s.bundle", "%s"]
 
-    def getplatformpaths(self,libname):
+    def getplatformpaths(self, libname):
         if os.path.pathsep in libname:
             names = [libname]
         else:
@@ -408,10 +516,10 @@ class DarwinLibraryLoader(LibraryLoader):
 
         for dir in self.getdirs(libname):
             for name in names:
-                yield os.path.join(dir,name)
+                yield os.path.join(dir, name)
 
-    def getdirs(self,libname):
-        '''Implements the dylib search as specified in Apple documentation:
+    def getdirs(self, libname):
+        """Implements the dylib search as specified in Apple documentation:
 
         http://developer.apple.com/documentation/DeveloperTools/Conceptual/
             DynamicLibraries/Articles/DynamicLibraryUsageGuidelines.html
@@ -419,7 +527,7 @@ class DarwinLibraryLoader(LibraryLoader):
         Before commencing the standard search, the method first checks
         the bundle's ``Frameworks`` directory if the application is running
         within a bundle (OS X .app).
-        '''
+        """
 
         dyld_fallback_library_path = _environ_path("DYLD_FALLBACK_LIBRARY_PATH")
         if not dyld_fallback_library_path:
@@ -448,6 +556,7 @@ class DarwinLibraryLoader(LibraryLoader):
 
         return dirs
 
+
 # Posix
 
 class PosixLibraryLoader(LibraryLoader):
@@ -463,24 +572,26 @@ class PosixLibraryLoader(LibraryLoader):
 
         directories = []
         for name in ("LD_LIBRARY_PATH",
-                     "SHLIB_PATH", # HPUX
-                     "LIBPATH", # OS/2, AIX
-                     "LIBRARY_PATH", # BE/OS
-                    ):
+                     "SHLIB_PATH",  # HPUX
+                     "LIBPATH",  # OS/2, AIX
+                     "LIBRARY_PATH",  # BE/OS
+        ):
             if name in os.environ:
                 directories.extend(os.environ[name].split(os.pathsep))
         directories.extend(self.other_dirs)
         directories.append(".")
         directories.append(os.path.dirname(__file__))
 
-        try: directories.extend([dir.strip() for dir in open('/etc/ld.so.conf')])
-        except IOError: pass
+        try:
+            directories.extend([dir.strip() for dir in open('/etc/ld.so.conf')])
+        except IOError:
+            pass
 
         directories.extend(['/lib', '/usr/lib', '/lib64', '/usr/lib64'])
 
         cache = {}
-        lib_re = re.compile(r'lib(.*)\.s[ol]')
-        ext_re = re.compile(r'\.s[ol]$')
+        lib_re = re.compile(r"lib(.*)\.s[ol]")
+        ext_re = re.compile(r"\.s[ol]$")
         for dir in directories:
             try:
                 for path in glob.glob("%s/*.s[ol]*" % dir):
@@ -509,7 +620,8 @@ class PosixLibraryLoader(LibraryLoader):
         if result: yield result
 
         path = ctypes.util.find_library(libname)
-        if path: yield os.path.join("/lib",path)
+        if path: yield os.path.join("/lib", path)
+
 
 # Windows
 
@@ -519,11 +631,14 @@ class _WindowsLibrary(object):
         self.windll = ctypes.windll.LoadLibrary(path)
 
     def __getattr__(self, name):
-        try: return getattr(self.cdll,name)
+        try:
+            return getattr(self.cdll, name)
         except AttributeError:
-            try: return getattr(self.windll,name)
+            try:
+                return getattr(self.windll, name)
             except AttributeError:
                 raise
+
 
 class WindowsLibraryLoader(LibraryLoader):
     name_formats = ["%s.dll", "lib%s.dll", "%slib.dll"]
@@ -569,15 +684,17 @@ class WindowsLibraryLoader(LibraryLoader):
 # the Ctypesgen maintainers.
 
 loaderclass = {
-    "darwin":   DarwinLibraryLoader,
-    "cygwin":   WindowsLibraryLoader,
-    "win32":    WindowsLibraryLoader
+    "darwin": DarwinLibraryLoader,
+    "cygwin": WindowsLibraryLoader,
+    "win32": WindowsLibraryLoader
 }
 
 loader = loaderclass.get(sys.platform, PosixLibraryLoader)()
 
+
 def add_library_search_dirs(other_dirs):
     loader.other_dirs = other_dirs
+
 
 load_library = loader.load_library
 
@@ -596,23 +713,24 @@ _libs["edfapi"] = load_library("edfapi")
 
 # No modules
 
-byte = c_ubyte # <input>: 101
+byte = c_ubyte  # <input>: 101
 
-INT16 = c_short # <input>: 102
+INT16 = c_short  # <input>: 102
 
-INT32 = c_int # <input>: 103
+INT32 = c_int  # <input>: 103
 
-UINT16 = c_ushort # <input>: 104
+UINT16 = c_ushort  # <input>: 104
 
-UINT32 = c_uint # <input>: 105
+UINT32 = c_uint  # <input>: 105
 
-UINT64 = c_ulonglong # <input>: 107
+UINT64 = c_ulonglong  # <input>: 107
 
-INT64 = c_longlong # <input>: 108
+INT64 = c_longlong  # <input>: 108
 
 # <input>: 115
 class struct_anon_1(Structure):
     pass
+
 
 struct_anon_1.__slots__ = [
     'msec',
@@ -623,11 +741,12 @@ struct_anon_1._fields_ = [
     ('usec', INT16),
 ]
 
-MICRO = struct_anon_1 # <input>: 115
+MICRO = struct_anon_1  # <input>: 115
 
 # <input>: 186
 class struct_anon_2(Structure):
     pass
+
 
 struct_anon_2.__slots__ = [
     'len',
@@ -638,11 +757,12 @@ struct_anon_2._fields_ = [
     ('c', c_char),
 ]
 
-LSTRING = struct_anon_2 # <input>: 186
+LSTRING = struct_anon_2  # <input>: 186
 
 # <input>: 242
 class struct_anon_3(Structure):
     pass
+
 
 struct_anon_3.__slots__ = [
     'time',
@@ -705,11 +825,12 @@ struct_anon_3._fields_ = [
     ('errors', UINT16),
 ]
 
-FSAMPLE = struct_anon_3 # <input>: 242
+FSAMPLE = struct_anon_3  # <input>: 242
 
 # <input>: 288
 class struct_anon_4(Structure):
     pass
+
 
 struct_anon_4.__slots__ = [
     'time',
@@ -786,11 +907,12 @@ struct_anon_4._fields_ = [
     ('message', POINTER(LSTRING)),
 ]
 
-FEVENT = struct_anon_4 # <input>: 288
+FEVENT = struct_anon_4  # <input>: 288
 
 # <input>: 297
 class struct_anon_5(Structure):
     pass
+
 
 struct_anon_5.__slots__ = [
     'time',
@@ -805,11 +927,12 @@ struct_anon_5._fields_ = [
     ('text', byte * 260),
 ]
 
-IMESSAGE = struct_anon_5 # <input>: 297
+IMESSAGE = struct_anon_5  # <input>: 297
 
 # <input>: 306
 class struct_anon_6(Structure):
     pass
+
 
 struct_anon_6.__slots__ = [
     'time',
@@ -822,11 +945,12 @@ struct_anon_6._fields_ = [
     ('data', UINT16),
 ]
 
-IOEVENT = struct_anon_6 # <input>: 306
+IOEVENT = struct_anon_6  # <input>: 306
 
 # <input>: 330
 class struct_anon_7(Structure):
     pass
+
 
 struct_anon_7.__slots__ = [
     'time',
@@ -855,11 +979,12 @@ struct_anon_7._fields_ = [
     ('eye', byte),
 ]
 
-RECORDINGS = struct_anon_7 # <input>: 330
+RECORDINGS = struct_anon_7  # <input>: 330
 
 # <input>: 341
 class union_anon_8(Union):
     pass
+
 
 union_anon_8.__slots__ = [
     'fe',
@@ -876,21 +1001,22 @@ union_anon_8._fields_ = [
     ('rec', RECORDINGS),
 ]
 
-ALLF_DATA = union_anon_8 # <input>: 341
+ALLF_DATA = union_anon_8  # <input>: 341
 
-enum_anon_9 = c_int # <input>: 534
+enum_anon_9 = c_int  # <input>: 534
 
-GAZE = 0 # <input>: 534
+GAZE = 0  # <input>: 534
 
-HREF = (GAZE + 1) # <input>: 534
+HREF = (GAZE + 1)  # <input>: 534
 
-RAW = (HREF + 1) # <input>: 534
+RAW = (HREF + 1)  # <input>: 534
 
-position_type = enum_anon_9 # <input>: 534
+position_type = enum_anon_9  # <input>: 534
 
 # <input>: 565
 class struct_anon_10(Structure):
     pass
+
 
 struct_anon_10.__slots__ = [
     'rec',
@@ -905,17 +1031,19 @@ struct_anon_10._fields_ = [
     ('endtime', c_uint),
 ]
 
-TRIAL = struct_anon_10 # <input>: 565
+TRIAL = struct_anon_10  # <input>: 565
 
 # <input>: 571
 class struct__EDFFILE(Structure):
     pass
 
-EDFFILE = struct__EDFFILE # <input>: 571
+
+EDFFILE = struct__EDFFILE  # <input>: 571
 
 # <input>: 585
 class struct_anon_11(Structure):
     pass
+
 
 struct_anon_11.__slots__ = [
     'id',
@@ -924,7 +1052,7 @@ struct_anon_11._fields_ = [
     ('id', c_uint),
 ]
 
-BOOKMARK = struct_anon_11 # <input>: 585
+BOOKMARK = struct_anon_11  # <input>: 585
 
 # <input>: 628
 if hasattr(_libs['edfapi'], 'edf_open_file'):
@@ -1115,61 +1243,71 @@ if hasattr(_libs['edfapi'], 'edf_get_recording'):
 # <input>: 1142
 if hasattr(_libs['edfapi'], 'edf_get_uncorrected_raw_pupil'):
     get_uncorrected_raw_pupil = _libs['edfapi'].edf_get_uncorrected_raw_pupil
-    get_uncorrected_raw_pupil.argtypes = [POINTER(EDFFILE), POINTER(FSAMPLE), c_int, POINTER(c_float)]
+    get_uncorrected_raw_pupil.argtypes = [POINTER(EDFFILE), POINTER(FSAMPLE),
+                                          c_int, POINTER(c_float)]
     get_uncorrected_raw_pupil.restype = None
 
 # <input>: 1143
 if hasattr(_libs['edfapi'], 'edf_get_uncorrected_raw_cr'):
     get_uncorrected_raw_cr = _libs['edfapi'].edf_get_uncorrected_raw_cr
-    get_uncorrected_raw_cr.argtypes = [POINTER(EDFFILE), POINTER(FSAMPLE), c_int, POINTER(c_float)]
+    get_uncorrected_raw_cr.argtypes = [POINTER(EDFFILE), POINTER(FSAMPLE),
+                                       c_int, POINTER(c_float)]
     get_uncorrected_raw_cr.restype = None
 
 # <input>: 1144
 if hasattr(_libs['edfapi'], 'edf_get_uncorrected_pupil_area'):
     get_uncorrected_pupil_area = _libs['edfapi'].edf_get_uncorrected_pupil_area
-    get_uncorrected_pupil_area.argtypes = [POINTER(EDFFILE), POINTER(FSAMPLE), c_int]
+    get_uncorrected_pupil_area.argtypes = [POINTER(EDFFILE), POINTER(FSAMPLE),
+                                           c_int]
     get_uncorrected_pupil_area.restype = UINT32
 
 # <input>: 1145
 if hasattr(_libs['edfapi'], 'edf_get_uncorrected_cr_area'):
     get_uncorrected_cr_area = _libs['edfapi'].edf_get_uncorrected_cr_area
-    get_uncorrected_cr_area.argtypes = [POINTER(EDFFILE), POINTER(FSAMPLE), c_int]
+    get_uncorrected_cr_area.argtypes = [POINTER(EDFFILE), POINTER(FSAMPLE),
+                                        c_int]
     get_uncorrected_cr_area.restype = UINT32
 
 # <input>: 1146
 if hasattr(_libs['edfapi'], 'edf_get_pupil_dimension'):
     get_pupil_dimension = _libs['edfapi'].edf_get_pupil_dimension
-    get_pupil_dimension.argtypes = [POINTER(EDFFILE), POINTER(FSAMPLE), c_int, POINTER(UINT32)]
+    get_pupil_dimension.argtypes = [POINTER(EDFFILE), POINTER(FSAMPLE), c_int,
+                                    POINTER(UINT32)]
     get_pupil_dimension.restype = None
 
 # <input>: 1147
 if hasattr(_libs['edfapi'], 'edf_get_cr_dimension'):
     get_cr_dimension = _libs['edfapi'].edf_get_cr_dimension
-    get_cr_dimension.argtypes = [POINTER(EDFFILE), POINTER(FSAMPLE), POINTER(UINT32)]
+    get_cr_dimension.argtypes = [POINTER(EDFFILE), POINTER(FSAMPLE),
+                                 POINTER(UINT32)]
     get_cr_dimension.restype = None
 
 # <input>: 1148
 if hasattr(_libs['edfapi'], 'edf_get_window_position'):
     get_window_position = _libs['edfapi'].edf_get_window_position
-    get_window_position.argtypes = [POINTER(EDFFILE), POINTER(FSAMPLE), POINTER(UINT32)]
+    get_window_position.argtypes = [POINTER(EDFFILE), POINTER(FSAMPLE),
+                                    POINTER(UINT32)]
     get_window_position.restype = None
 
 # <input>: 1149
 if hasattr(_libs['edfapi'], 'edf_get_pupil_cr'):
     get_pupil_cr = _libs['edfapi'].edf_get_pupil_cr
-    get_pupil_cr.argtypes = [POINTER(EDFFILE), POINTER(FSAMPLE), c_int, POINTER(c_float)]
+    get_pupil_cr.argtypes = [POINTER(EDFFILE), POINTER(FSAMPLE), c_int,
+                             POINTER(c_float)]
     get_pupil_cr.restype = None
 
 # <input>: 1150
 if hasattr(_libs['edfapi'], 'edf_get_uncorrected_cr2_area'):
     get_uncorrected_cr2_area = _libs['edfapi'].edf_get_uncorrected_cr2_area
-    get_uncorrected_cr2_area.argtypes = [POINTER(EDFFILE), POINTER(FSAMPLE), c_int]
+    get_uncorrected_cr2_area.argtypes = [POINTER(EDFFILE), POINTER(FSAMPLE),
+                                         c_int]
     get_uncorrected_cr2_area.restype = UINT32
 
 # <input>: 1151
 if hasattr(_libs['edfapi'], 'edf_get_uncorrected_raw_cr2'):
     get_uncorrected_raw_cr2 = _libs['edfapi'].edf_get_uncorrected_raw_cr2
-    get_uncorrected_raw_cr2.argtypes = [POINTER(EDFFILE), POINTER(FSAMPLE), c_int, POINTER(c_float)]
+    get_uncorrected_raw_cr2.argtypes = [POINTER(EDFFILE), POINTER(FSAMPLE),
+                                        c_int, POINTER(c_float)]
     get_uncorrected_raw_cr2.restype = None
 
 # <input>: 1159
@@ -1196,7 +1334,7 @@ if hasattr(_libs['edfapi'], 'edf_set_log_function'):
     set_log_function.argtypes = [CFUNCTYPE(UNCHECKED(None), String)]
     set_log_function.restype = None
 
-_EDFFILE = struct__EDFFILE # <input>: 571
+_EDFFILE = struct__EDFFILE  # <input>: 571
 
 # Begin inserted files
 
@@ -1205,23 +1343,26 @@ _EDFFILE = struct__EDFFILE # <input>: 571
 # Contents of this file are appended to the end of the autogenerated 
 # edf2py.py script.
 
-import os
+
 import ctypes as ct
+
 
 def edf_file(file_name):
     error_code = ct.c_int(1)
-    file_path=os.path.normpath(os.path.abspath(file_name))
+    file_path = os.path.normpath(os.path.abspath(file_name))
     edf_ptr = open_file(file_path, 2, 1, 1, ct.byref(error_code))
     if edf_ptr is None or error_code.value != 0:
         return None
     return edf_ptr
-    
+
+
 def preamble_text(edfptr):
     preambleText = String()
     tlen = get_preamble_text_length(edfptr)
-    get_preamble_text(edfptr, preambleText, tlen+1)
+    get_preamble_text(edfptr, preambleText, tlen + 1)
     return preambleText
-    
+
+
 import defines
 from defines import edf_constants as constants
 from defines import event_constants as event_constants
