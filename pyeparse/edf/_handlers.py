@@ -1,19 +1,20 @@
 # -*- coding: utf-8 -*-
 """
 handlers.py contains the functions that are called for each element type
-within an edf file. 
+within an edf file.
 
-The handlers are basically stubs right now, but the idea 
+The handlers are basically stubs right now, but the idea
 would be that each would get the element data, do whatever processing is needed
-on it, and return an the element in the form that will be used by the parent 
-module. 
+on it, and return an the element in the form that will be used by the parent
+module.
 
 Created on Sat Mar 15 20:40:48 2014
 
 @author: Sol
 """
-import edf2py
-from edf2py import defines, event_constants
+from . import _edf2py as edf2py
+from ._edf2py import event_constants
+from . import _defines as defines
 import ctypes as ct
 
 #
@@ -23,7 +24,7 @@ import ctypes as ct
 
 def todo(func):
     """
-    @ to make it easy to flag handlers that are not yet completed (which is 
+    @ to make it easy to flag handlers that are not yet completed (which is
     all of them right now).
     """
 
@@ -180,7 +181,7 @@ def handle_sample(event_type, edf_ptr):
     ets = event_constants.get(event_type, "UNKNOWN EDF EVENT TYPE")
     edict = to_dict(e)
     edict['name'] = ets
-    #return edict  
+    #return edict
 
 
 @todo
