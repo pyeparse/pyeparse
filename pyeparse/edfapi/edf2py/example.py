@@ -15,7 +15,7 @@ TO RUN:
 
     python example.py
       
-TODO:
+todo:
    - Add usage of the various trial level grouping functions
    - Add usage of the EDF file bookmark related fucntions
    - ???
@@ -25,23 +25,24 @@ Created on Sat Mar 15 09:40:17 2014
 @author: Sol      
 """
 import edf2py
-import os, sys
-import ctypes as ct
+import sys
+
 
 file_name = "../../tests/data/test_2_raw.edf"
 # See comments for edf_set_trial_identifier func in edf.h
 # 
-trial_start_str="TRIALID"
-trial_end_str=None
+trial_start_str = "TRIALID"
+trial_end_str = None
 
 if __name__ == '__main__':
     from handlers import element_handlers, default_handler
     from edf2py import event_constants
+
     try:
         # Open the EDF file for processing
         edf = edf2py.edf_file(file_name)
         if edf is None:
-            print "Error openning '{0}'. Exiting Demo.".format(file_name)
+            print "Error opening '{0}'. Exiting Demo.".format(file_name)
             sys.exit(0)
 
         # Get the file preamble

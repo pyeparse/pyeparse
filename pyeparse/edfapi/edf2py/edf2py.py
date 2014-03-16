@@ -384,7 +384,7 @@ class LibraryLoader(object):
         if os.path.isabs(libname):
             yield libname
         else:
-            # FIXME / TODO return '.' and os.path.dirname(__file__)
+            # FIXME / todo return '.' and os.path.dirname(__file__)
             for path in self.getplatformpaths(libname):
                 yield path
 
