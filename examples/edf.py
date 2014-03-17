@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Example usage (and testing) of the edf2py ctypes wrapper for the EDF Access API.
+Example usage (and testing) of the edf2py ctypes wrapper for the EDF Access API
 
 This example is a work in progress, and is intended to test each function
 available from edf2py. By creating this example, it also becomes clear
@@ -52,7 +52,7 @@ try:
     print('** EyeLink Model: %s', get_eyelink_revision(edf))
 
     sti_result = set_trial_identifier(edf, trial_start_str,
-                                        trial_end_str)
+                                      trial_end_str)
     num_trials = get_trial_count(edf)
     print("** Number Trials in Recording: %s" % num_trials)
     item_count = get_element_count(edf)
@@ -61,7 +61,7 @@ try:
     while etype != event_constants.get('NO_PENDING_ITEMS'):
         etype = get_next_data(edf)
         r = element_handlers.get(event_constants[etype],
-                                    default_handler)(etype, edf)
+                                 default_handler)(etype, edf)
         if r:
             if etype == event_constants['MESSAGEEVENT']:
                 print(r)

@@ -158,7 +158,7 @@ def handle_message(event_type, edf_ptr):
     """
     Handler func for a MSG event.
     """
-    # todo: getting msg text should be this hard, llok into how to access string
+    # todo: getting msg text should be this hard, look into how to access str
     # properly.
     msg = edf2py.get_event_data(edf_ptr).contents
     ets = event_constants.get(event_type, "UNKNOWN EDF EVENT TYPE")
@@ -177,7 +177,7 @@ def handle_message(event_type, edf_ptr):
 def handle_sample(event_type, edf_ptr):
     e = edf2py.get_sample_data(edf_ptr).contents
     # use sflags to know what fields are populated for the given sample
-    sflags = sample_fields_available(e.flags)
+    #sflags = sample_fields_available(e.flags) XXX ?
     ets = event_constants.get(event_type, "UNKNOWN EDF EVENT TYPE")
     edict = to_dict(e)
     edict['name'] = ets
@@ -276,23 +276,26 @@ def handle_input(event_type, edf_ptr):
 
 @todo
 def handle_start_parse(event_type, edf_ptr):
-    e = edf2py.get_float_data(edf_ptr).contents
-    ets = event_constants.get(event_type, "UNKNOWN EDF EVENT TYPE")
+    #e = edf2py.get_float_data(edf_ptr).contents
+    #ets = event_constants.get(event_type, "UNKNOWN EDF EVENT TYPE")
     # TODO: ???
+    pass
 
 
 @todo
 def handle_end_parse(event_type, edf_ptr):
-    e = edf2py.get_float_data(edf_ptr).contents
-    ets = event_constants.get(event_type, "UNKNOWN EDF EVENT TYPE")
+    #e = edf2py.get_float_data(edf_ptr).contents
+    #ets = event_constants.get(event_type, "UNKNOWN EDF EVENT TYPE")
     # TODO: ???
+    pass
 
 
 @todo
 def handle_break_parse(event_type, edf_ptr):
-    e = edf2py.get_float_data(edf_ptr).contents
-    ets = event_constants.get(event_type, "UNKNOWN EDF EVENT TYPE")
+    #e = edf2py.get_float_data(edf_ptr).contents
+    #ets = event_constants.get(event_type, "UNKNOWN EDF EVENT TYPE")
     # TODO: ???
+    pass
 
 
 def handle_eof(event_type, edf_ptr):
