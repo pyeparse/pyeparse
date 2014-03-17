@@ -12,14 +12,44 @@ Created on Sat Mar 15 20:40:48 2014
 
 @author: Sol
 """
+
+from os import path as op
 from . import _edf2py as edf2py
-from ._edf2py import event_constants
+from ._defines import event_constants
 from . import _defines as defines
 import ctypes as ct
 
 #
 ## Helper functions
 #
+
+
+class edf_open(object):
+    """Context manager for opening EDF files"""
+    def __init__(self, fname):
+        self.fname = op.normpath(op.abspath(fname))
+        self.fid = None
+
+    def __enter__(self):
+        error_code = ct.c_int(1)
+        self.fid = edf2py.open_file(self.fname, 2, 1, 1, ct.byref(error_code))
+        if self.fid is None or error_code.value != 0:
+            raise IOError('Could not open file "%s": (%s, %s)'
+                          % (self.fname, self.fid, error_code.value))
+        return self.fid
+
+    def __exit__(self, type, value, traceback):
+        if self.fid is not None:
+            result = edf2py.close_file(self.fid)
+            if result != 0:
+                raise IOError('File "%s" could not be closed' % self.fname)
+
+
+def preamble_text(edfptr):
+    preambleText = edf2py.String()
+    tlen = edf2py.get_preamble_text_length(edfptr)
+    edf2py.get_preamble_text(edfptr, preambleText, tlen+1)
+    return preambleText
 
 
 def todo(func):
@@ -302,7 +332,8 @@ def handle_eof(event_type, edf_ptr):
     """
     Handle end of EDF file condition.
     """
-    edf2py.close_file(edf_ptr)
+    pass  # we close it explicitly in the context manager
+    #edf2py.close_file(edf_ptr)
 
 # element_handlers maps the various EDF file element types to the
 # element handler function that should be called.

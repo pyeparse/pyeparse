@@ -26,24 +26,22 @@ Created on Sat Mar 15 09:40:17 2014
 """
 
 from os import path as op
-from pyeparse.edf._edf2py import (edf_file, close_file, preamble_text,
-                                  get_revision, get_eyelink_revision,
+from pyeparse.edf._edf2py import (get_revision, get_eyelink_revision,
                                   set_trial_identifier, get_trial_count,
-                                  get_element_count, get_next_data,
-                                  event_constants)
-from pyeparse.edf._handlers import element_handlers, default_handler
+                                  get_element_count, get_next_data)
+from pyeparse.edf._defines import event_constants
+from pyeparse.edf._handlers import (element_handlers, default_handler,
+                                    edf_open, preamble_text)
 
 
-fname = op.join(op.dirname(__file__), "../pyeparse/data/test_2_raw.edf")
+fname = op.join(op.dirname(__file__), "../pyeparse/tests/data/test_2_raw.edf")
 # See comments for edf_set_trial_identifier func in edf.h
 #
 trial_start_str = "TRIALID"
 trial_end_str = None
 
 
-# XXX this should be a context manager
-edf = edf_file(fname)
-try:
+with edf_open(fname) as edf:
     # Open the EDF file for processing
     if edf is None:
         raise RuntimeError("Error opening '%s'. Exiting Demo." % fname)
@@ -67,12 +65,3 @@ try:
                 print(r)
             else:
                 print(r['name'], r.get('sttime', ''))
-
-except Exception as e:
-    import traceback
-    traceback.print_exc()
-    try:
-        close_file(edf)
-    except Exception:
-        pass
-    raise e
