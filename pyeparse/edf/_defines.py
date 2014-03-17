@@ -76,6 +76,8 @@ eye_constants = create_constants(dict(
     ))
 
 
+pupil_constants = create_constants(dict(PUPIL_AREA=0, PUPIL_DIAMETER=1))
+
 ##******** EYE SAMPLE DATA FORMATS ******
 #
 #	#The SAMPLE struct contains data from one 4-msec

@@ -6,7 +6,8 @@ import numpy as np
 import math
 from collections import deque
 from functools import partial
-from .utils import create_chunks, fwhm_kernel_2d, string_types
+from .utils import create_chunks, fwhm_kernel_2d
+from ._py23 import string_types
 
 
 def plot_calibration(raw, title='Calibration', show=True):

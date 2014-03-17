@@ -4,11 +4,6 @@
 
 import numpy as np
 from os import path as op
-import shutil
-import tempfile
-from subprocess import Popen, PIPE
-
-from ._py23 import string_types
 
 # Store these in one place
 discrete_types = ['saccades', 'fixations', 'blinks']
@@ -61,53 +56,8 @@ def pupil_kernel(fs, dur=4.0):
     return h
 
 
-class raw_open(object):
-    """Context manager that will convert EDF to ASC on the fly"""
-    def __init__(self, fname):
-        if not isinstance(fname, string_types):
-            raise TypeError('fname must be a string')
-        if not op.isfile(fname):
-            raise IOError('File not found: %s' % fname)
-        if fname.endswith('.edf'):
-            # Ideally we will eventually handle the binary files directly
-            out_dir = tempfile.mkdtemp('edf2asc')
-            out_fname = op.join(out_dir, 'temp.asc')
-            p = Popen(['edf2asc', fname, out_fname], stderr=PIPE, stdout=PIPE)
-            stdout_, stderr = p.communicate()
-            if p.returncode != 255:
-                print((p.returncode, stdout_, stderr))
-                raise RuntimeError('Could not convert EDF to ASC')
-            self.fname = out_fname
-            self.dir = out_dir
-        else:
-            self.fname = fname
-            self.dir = None
-
-    def __enter__(self):
-        self.fid = open(self.fname, 'r')
-        return self.fid
-
-    def __exit__(self, type, value, traceback):
-        self.fid.close()
-        if self.dir is not None:
-            shutil.rmtree(self.dir)
-
-
-def _has_edf2asc():
-    """See if the user has edf2asc"""
-    try:
-        Popen(['edf2asc', '--help'], stderr=PIPE, stdout=PIPE).communicate()
-    except Exception:
-        out = False
-    else:
-        out = True
-    return out
-
-
 def _get_test_fnames():
     """Get usable test files (omit EDF if no edf2asc)"""
     path = op.join(op.dirname(__file__), 'tests', 'data')
-    fnames = [op.join(path, 'test_raw.asc')]
-    if _has_edf2asc():
-        fnames.append(op.join(path, 'test_2_raw.edf'))
+    fnames = [op.join(path, 'test_2_raw.edf')]
     return fnames

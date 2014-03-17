@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Authors: Denis Engemann <d.engemann@fz-juelich.de>
 #
 # License: BSD (3-clause)
@@ -7,9 +8,10 @@ import numpy as np
 from scipy.optimize import fmin_slsqp
 import warnings
 
-from .event import Discrete
+from ._event import Discrete
 from .viz import plot_epochs
-from .utils import string_types, discrete_types, pupil_kernel
+from .utils import discrete_types, pupil_kernel
+from ._py23 import string_types
 from .parallel import parallel_func
 
 
