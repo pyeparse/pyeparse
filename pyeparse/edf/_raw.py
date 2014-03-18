@@ -291,7 +291,7 @@ def _handle_message(edf, res):
     e = edf_get_event_data(edf).contents
     msg = ct.string_at(ct.byref(e.message[0]), e.message.contents.len + 1)[2:]
     res['messages']['time'].append(e.sttime)
-    res['messages']['msg'].append(msg)
+    res['messages']['msg'].append(msg.decode('ASCII'))
 
 
 def _handle_end(edf, res, name):
