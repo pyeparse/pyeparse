@@ -95,7 +95,7 @@ def _read_raw_edf(fname):
         res = dict(info=info, samples=None, n_samps=n_samps,
                    offsets=offsets, buttons=buttons, inputs=inputs,
                    blinks=None, saccades=None, fixations=None,
-                   messages=dict(times=[], msgs=[]))
+                   messages=dict(time=[], msg=[]))
         res['samples'] = np.empty((4, 1000), np.float64)
         while etype != event_constants.get('NO_PENDING_ITEMS'):
             etype = edf_get_next_data(edf)
@@ -111,8 +111,8 @@ def _read_raw_edf(fname):
     for key in ('saccades', 'fixations', 'blinks',
                 'buttons', 'inputs', 'messages'):
         discrete[key] = res[key]
-    discrete['messages']['times'] = np.array(discrete['messages']['times'],
-                                             np.float64)
+    discrete['messages']['time'] = np.array(discrete['messages']['time'],
+                                            np.float64)
     times = res['samples'][0].copy()
     info = res['info']
     t_zero = 0  # XXX NEED TO FIX TIME OFFSETS
@@ -281,8 +281,8 @@ def _handle_message(edf, res):
     # XXX: getting msg text should be this hard, look into how to access str
     e = edf_get_event_data(edf).contents
     msg = ct.string_at(ct.byref(e.message[0]), e.message.contents.len + 1)[2:]
-    res['messages']['times'].append(e.sttime)
-    res['messages']['msgs'].append(msg)
+    res['messages']['time'].append(e.sttime)
+    res['messages']['msg'].append(msg)
 
 
 def _handle_end(edf, res, name):
