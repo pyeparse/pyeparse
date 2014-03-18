@@ -90,12 +90,12 @@ def _read_raw_edf(fname):
     inputs = np.empty((n_samps['input'], 2))
     with _edf_open(fname) as edf:
         info = _parse_preamble(edf)
+        info['discrete_fields'] = dict()
         #item_count = edf2py.get_element_count(edf)
         etype = None
         res = dict(info=info, samples=None, n_samps=n_samps,
                    offsets=offsets, buttons=buttons, inputs=inputs,
-                   blinks=None, saccades=None, fixations=None,
-                   messages=dict(time=[], msg=[]))
+                   message=dict(time=[], msg=[]), edf_fields=dict())
         res['samples'] = np.empty((4, 1000), np.float64)
         while etype != event_constants.get('NO_PENDING_ITEMS'):
             etype = edf_get_next_data(edf)
@@ -112,7 +112,7 @@ def _read_raw_edf(fname):
     info['event_types'] = ('saccades', 'fixations', 'blinks',
                            'buttons', 'inputs', 'messages')
     for key in info['event_types']:
-        discrete[key] = res[key]
+        discrete[key] = res[key[:-1]]
     discrete['messages']['time'] = np.array(discrete['messages']['time'],
                                             np.float64)
     times = res['samples'][0].copy()
@@ -230,7 +230,7 @@ def _event_fields_available(eflags):
 _pp2el = dict(eye='eye', time='time', stime='sttime', etime='entime',
               xpos='gx', ypos='gy', sxp='gstx', syp='gsty',
               exp='genx', eyp='geny', axp='gavx', ayp='gavy',
-              pv='pvel', ps='pa', aps='avg')
+              pv='pvel', ps='pa', aps='avg', buttons='buttons', input='input')
 _el2pp = dict()
 for key, val in _pp2el.items():
     _el2pp[val] = key
@@ -282,14 +282,13 @@ def _handle_message(edf, res):
     # XXX: getting msg text should be this hard, look into how to access str
     e = edf_get_event_data(edf).contents
     msg = ct.string_at(ct.byref(e.message[0]), e.message.contents.len + 1)[2:]
-    res['messages']['time'].append(e.sttime)
-    res['messages']['msg'].append(msg)
+    res['message']['time'].append(e.sttime)
+    res['message']['msg'].append(msg)
 
 
 def _handle_end(edf, res, name):
-    """ENDSACC, ENDFIX, ENDBLINK"""
-    key = '%s_fields' % name
-    if key not in res['info']:
+    """ENDSACC, ENDFIX, ENDBLINK, BUTTONS, INPUT"""
+    if name not in res['info']['discrete_fields']:
         # XXX This should be changed to support given fields
         if name == 'saccade':
             f = ['eye', 'sttime', 'entime',
@@ -298,34 +297,20 @@ def _handle_end(edf, res, name):
             f = ['eye', 'sttime', 'entime', 'gavx', 'gavy']
         elif name == 'blink':
             f = ['eye', 'sttime', 'entime']
+        elif name == 'button':
+            f = ['sttime', 'buttons']
+        elif name == 'input':
+            f = ['sttime', 'input']
         else:
             raise KeyError('Unknown name %s' % name)
-        res['edf_%s' % key] = f
-        res['info'][key] = [_el2pp[field] for field in f]
-        res['%ss' % name] = np.empty((res['n_samps'][name], len(f)),
-                                     np.float64)
+        res['edf_fields'][name] = f
+        res['info']['discrete_fields'][name] = [_el2pp[field] for field in f]
+        res[name] = np.empty((res['n_samps'][name], len(f)), np.float64)
     e = edf_get_event_data(edf).contents
-    vals = _to_list(e, res['edf_%s_fields' % name], res['eye_idx'])
+    vals = _to_list(e, res['edf_fields'][name], res['eye_idx'])
     off = res['offsets'][name]
-    res['%ss' % name][off, :] = vals
+    res[name][off, :] = vals
     res['offsets'][name] += 1
-
-
-def _handle_button(edf, res):
-    """BUTTONEVENT"""
-    e = edf_get_event_data(edf).contents
-    off = res['offsets']['button']
-    res['buttons'][off, :] = [e.sttime, float(e.buttons)]
-    res['offsets']['button'] += 1
-    pass
-
-
-def _handle_input(edf, res):
-    """INPUTEVENT"""
-    e = edf_get_event_data(edf).contents
-    off = res['offsets']['input']
-    res['inputs'][off, :] = [e.sttime, float(e.input)]
-    res['offsets']['input'] += 1
 
 
 def _handle_pass(edf, res):
@@ -343,12 +328,12 @@ def _handle_fixation_update(edf, res):
 #
 _element_handlers = dict(RECORDING_INFO=_handle_recording_info,
                          SAMPLE_TYPE=_handle_sample,
+                         MESSAGEEVENT=_handle_message,
                          ENDFIX=partial(_handle_end, name='fixation'),
                          ENDSACC=partial(_handle_end, name='saccade'),
                          ENDBLINK=partial(_handle_end, name='blink'),
-                         MESSAGEEVENT=_handle_message,
-                         BUTTONEVENT=_handle_button,
-                         INPUTEVENT=_handle_input,
+                         BUTTONEVENT=partial(_handle_end, name='button'),
+                         INPUTEVENT=partial(_handle_end, name='input'),
                          STARTFIX=_handle_pass,
                          STARTSACC=_handle_pass,
                          STARTBLINK=_handle_pass,
