@@ -8,7 +8,7 @@ from datetime import datetime
 from functools import partial
 
 
-from . import _edf2py as ep
+from . import _edf2py as e2p
 from .._baseraw import _BaseRaw
 from ._defines import event_constants
 from . import _defines as defines
@@ -29,8 +29,7 @@ class RawEDF(_BaseRaw):
         self._times = times
         self._samples = samples
         self._t_zero = t_zero
-        # XXX ADD BACK IN
-        #_BaseRaw.__init__(self)  # perform sanity checks
+        _BaseRaw.__init__(self)  # perform sanity checks
 
 
 class _edf_open(object):
@@ -41,7 +40,7 @@ class _edf_open(object):
 
     def __enter__(self):
         error_code = ct.c_int(1)
-        self.fid = ep.edf_open_file(self.fname, 2, 1, 1, ct.byref(error_code))
+        self.fid = e2p.edf_open_file(self.fname, 2, 1, 1, ct.byref(error_code))
         if self.fid is None or error_code.value != 0:
             raise IOError('Could not open file "%s": (%s, %s)'
                           % (self.fname, self.fid, error_code.value))
@@ -49,7 +48,7 @@ class _edf_open(object):
 
     def __exit__(self, type, value, traceback):
         if self.fid is not None:
-            result = ep.edf_close_file(self.fid)
+            result = e2p.edf_close_file(self.fid)
             if result != 0:
                 raise IOError('File "%s" could not be closed' % self.fname)
 
@@ -74,7 +73,7 @@ def _read_raw_edf(fname):
     with _edf_open(fname) as edf:
         etype = None
         while etype != event_constants.get('NO_PENDING_ITEMS'):
-            etype = ep.edf_get_next_data(edf)
+            etype = e2p.edf_get_next_data(edf)
             if etype not in event_constants:
                 raise RuntimeError('unknown type %s' % event_constants[etype])
             ets = event_constants[etype]
@@ -96,7 +95,7 @@ def _read_raw_edf(fname):
                    messages=dict(times=[], msgs=[]))
         res['samples'] = np.empty((4, 1000), np.float64)
         while etype != event_constants.get('NO_PENDING_ITEMS'):
-            etype = ep.edf_get_next_data(edf)
+            etype = e2p.edf_get_next_data(edf)
             if etype not in event_constants:
                 raise RuntimeError('unknown type %s' % event_constants[etype])
             ets = event_constants[etype]
@@ -123,9 +122,9 @@ def _extract_sys_info(line):
 
 
 def _parse_preamble(edf):
-    txt = ep.String()
-    tlen = ep.edf_get_preamble_text_length(edf)
-    ep.edf_get_preamble_text(edf, txt, tlen+1)
+    txt = e2p.String()
+    tlen = e2p.edf_get_preamble_text_length(edf)
+    e2p.edf_get_preamble_text(edf, txt, tlen+1)
     preamble_lines = txt.split('\n')
     info = dict()
     for line in preamble_lines:
@@ -240,7 +239,7 @@ for key, val in _pp2el.items():
 def _handle_recording_info(edf, res):
     """RECORDING_INFO"""
     info = res['info']
-    e = ep.edf_get_recording_data(edf).contents
+    e = e2p.edf_get_recording_data(edf).contents
     if e.state == 0:  # recording stopped
         return
     if 'sfreq' in info:
@@ -267,26 +266,20 @@ def _handle_recording_info(edf, res):
 
 def _handle_sample(edf, res):
     """SAMPLE_TYPE"""
-    '''
-    e = edf2py.get_sample_data(edf).contents
+    e = e2p.edf_get_sample_data(edf).contents
     off = res['offsets']['sample']
     res['samples'][:, off] = _to_list(e, res['edf_sample_fields'],
                                       res['eye_idx'])
     res['offsets']['sample'] += 1
-    '''
-    pass
 
 
 def _handle_message(edf, res):
     """MESSAGEEVENT"""
     # XXX: getting msg text should be this hard, look into how to access str
-    '''
-    e = edf2py.get_event_data(edf).contents
+    e = e2p.edf_get_event_data(edf).contents
     msg = ct.string_at(ct.byref(e.message[0]), e.message.contents.len + 1)[2:]
     res['messages']['times'].append(e.sttime)
     res['messages']['msgs'].append(msg)
-    '''
-    pass
 
 
 def _handle_end(edf, res, name):
@@ -307,35 +300,28 @@ def _handle_end(edf, res, name):
         res['info'][key] = [_el2pp[field] for field in f]
         res['%ss' % name] = np.empty((res['n_samps'][name], len(f)),
                                      np.float64)
-    '''
-    e = edf2py.get_event_data(edf).contents
+    e = e2p.edf_get_event_data(edf).contents
     vals = _to_list(e, res['edf_%s_fields' % name], res['eye_idx'])
     off = res['offsets'][name]
     res['%ss' % name][off, :] = vals
     res['offsets'][name] += 1
-    '''
 
 
 def _handle_button(edf, res):
     """BUTTONEVENT"""
-    '''
-    e = edf2py.get_event_data(edf).contents
+    e = e2p.edf_get_event_data(edf).contents
     off = res['offsets']['button']
     res['buttons'][off, :] = [e.sttime, float(e.buttons)]
     res['offsets']['button'] += 1
-    '''
     pass
 
 
 def _handle_input(edf, res):
     """INPUTEVENT"""
-    '''
-    e = edf2py.get_event_data(edf).contents
+    e = e2p.edf_get_event_data(edf).contents
     off = res['offsets']['input']
     res['inputs'][off, :] = [e.sttime, float(e.input)]
     res['offsets']['input'] += 1
-    '''
-    pass
 
 
 def _handle_pass(edf, res):
