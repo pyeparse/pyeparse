@@ -121,22 +121,56 @@ def _read_raw_edf(fname):
     #
     # XXX This will need to be fixed for files with multiple starts/stops...
     data = res['samples'][1:]
-    times = res['samples'][0]
-    t_zero = times[0]
-    _adjust_time(times, t_zero)
+    orig_times = res['samples'][0]  # original times
+    assert np.array_equal(orig_times, np.sort(orig_times))
+    times = np.arange(len(orig_times), dtype=np.float64) / info['sfreq']
     for key in list(info['event_types']) + ['messages']:
         for sub_key in ('stime', 'etime', 'time'):
             if sub_key in discrete[key]:
-                _adjust_time(discrete[key][sub_key], t_zero)
+                _adjust_time(discrete[key][sub_key], orig_times, times)
+
+    _extract_calibration(info, discrete['messages'])
 
     # now we corect our time offsets
     return info, discrete, times, data
 
 
-def _adjust_time(x, t_zero):
+def _adjust_time(x, orig_times, times):
     """Helper to adjust time, inplace"""
-    x -= t_zero
-    x /= 1000.0
+    x[:] = np.interp(x, orig_times, times)
+
+
+def _extract_calibration(info, messages):
+    """Helper to extract calibration from messages"""
+    lines = []
+    for msg in messages['msg']:
+        if msg.startswith('!CAL') or msg.startswith('VALIDATE'):
+            lines.append(msg)
+    calibrations = list()
+    keys = ['point-x', 'point-y', 'offset', 'diff-x', 'diff-y']
+    li = 0
+    while(li < len(lines)):
+        line = lines[li]
+        if '!CAL VALIDATION ' in line and not 'ABORTED' in line:
+            cal_kind = line.split('!CAL VALIDATION ')[1].split()[0]
+            n_points = int([c for c in cal_kind if c.isdigit()][0])
+            this_validation = []
+            for ni in range(n_points):
+                subline = lines[li + ni + 1].split()
+                xy = subline[-6].split(',')
+                xy_diff = subline[-2].split(',')
+                vals = [float(v) for v in [xy[0], xy[1], subline[-4],
+                                           xy_diff[0], xy_diff[1]]]
+                this_validation.append(vals)
+            li += n_points
+            this_validation = np.array(this_validation).T
+            out = dict()
+            assert len(keys) == len(this_validation)
+            for key, val in zip(keys, this_validation):
+                out[key] = val
+            calibrations.append(out)
+        li += 1
+    info['calibrations'] = calibrations
 
 
 def _extract_sys_info(line):

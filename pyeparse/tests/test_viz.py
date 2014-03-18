@@ -23,7 +23,7 @@ def test_raw_plot():
     """Test plotting of raw"""
     for fi, fname in enumerate(fnames):
         raw = Raw(fname)
-        if 'calibration' in raw.info:
+        if 'calibrations' in raw.info:
             raw.plot_calibration()
         else:
             assert_raises(RuntimeError, raw.plot_calibration)

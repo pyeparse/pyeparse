@@ -29,9 +29,9 @@ def plot_calibration(raw, title='Calibration', show=True):
     """
     import matplotlib.pyplot as mpl
     figs = []
-    if 'calibration' not in raw.info:
+    if 'calibrations' not in raw.info:
         raise RuntimeError('No calibration found in raw')
-    for cal in raw.info['calibration']:
+    for cal in raw.info['calibrations']:
         fig = mpl.figure()
         figs.append(fig)
         px, py = cal['point-x'], cal['point-y']

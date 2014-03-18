@@ -4,6 +4,7 @@
 
 import numpy as np
 from os import path as op
+import glob
 
 # Store these in one place
 discrete_types = ['saccades', 'fixations', 'blinks']
@@ -59,5 +60,5 @@ def pupil_kernel(fs, dur=4.0):
 def _get_test_fnames():
     """Get usable test files (omit EDF if no edf2asc)"""
     path = op.join(op.dirname(__file__), 'tests', 'data')
-    fnames = [op.join(path, 'test_2_raw.edf')]
+    fnames = glob.glob(op.join(path, '*.edf'))
     return fnames
