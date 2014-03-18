@@ -44,4 +44,6 @@ if __name__ == "__main__":
                        'Operating System :: Unix',
                        'Operating System :: MacOS'],
           platforms='any',
-          packages=['pyeparse', 'pyeparse.tests'])
+          packages=['pyeparse', 'pyeparse.tests',
+                    'pyeparse.edf',
+                    ])
