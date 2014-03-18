@@ -33,10 +33,11 @@ install:
         conda install --yes --quiet scipy nose matplotlib;
       fi;
     # edf2asc
-    - echo "deb http://archive.canonical.com/ lucid partner" | sudo tee -a /etc/apt/sources.list;
-    - echo "deb http://download.sr-support.com/x64 /" | sudo tee -a /etc/apt/sources.list;
-    - travis_retry sudo apt-get -qq update;
-    - travis_retry sudo apt-get -qq install -y --force-yes edfapi-3.1;
+    - echo "deb http://archive.canonical.com/ lucid partner" | sudo tee -a /etc/apt/sources.list
+    - echo "deb http://download.sr-support.com/x64 /" | sudo tee -a /etc/apt/sources.list
+    - travis_retry sudo apt-get -qq update
+    - travis_retry sudo apt-get -qq install -y --force-yes edfapi-3.1
+    - sudo ldconfig
     # pandas
     - if [ "${DEPS}" == "full" ]; then
         if [ "${PYTHON}" == "2.7" ]; then
