@@ -148,7 +148,7 @@ def _parse_preamble(edf):
     tlen = edf_get_preamble_text_length(edf)
     txt = ct.create_string_buffer(tlen)
     edf_get_preamble_text(edf, txt, tlen + 1)
-    preamble_lines = txt.value.split('\n')
+    preamble_lines = txt.value.decode('ASCII').split('\n')
     info = dict()
     for line in preamble_lines:
         if '!MODE'in line:
