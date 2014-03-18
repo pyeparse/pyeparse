@@ -1,19 +1,19 @@
 # -*- coding: utf-8 -*-
 """Wrapper for libedfapi.so"""
 
-import ctypes
 import sys
 from ctypes import (c_int, Structure, c_char, c_char_p, c_ubyte,
-                    c_short, c_ushort, c_uint, c_float, POINTER)
+                    c_short, c_ushort, c_uint, c_float, POINTER, cdll)
 
 if 'win' in sys.platform:
-    edfapi = ctypes.cdll.LoadLibrary('edfapi.dll')
+    edfapi = cdll.LoadLibrary('edfapi.dll')
 else:
-    edfapi = ctypes.cdll.LoadLibrary('libedfapi.so')
+    edfapi = cdll.LoadLibrary('libedfapi.so')
 
 
 class LSTRING(Structure):
     pass
+
 LSTRING.__slots__ = ['len', 'c']
 LSTRING._fields_ = [('len', c_short), ('c', c_char)]
 
