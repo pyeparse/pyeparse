@@ -1,16 +1,17 @@
 # -*- coding: utf-8 -*-
 """Wrapper for libedfapi.so"""
 
-import sys
 from ctypes import (c_int, Structure, c_char, c_char_p, c_ubyte,
-                    c_short, c_ushort, c_uint, c_float, POINTER, cdll)
+                    c_short, c_ushort, c_uint, c_float, POINTER, CDLL, util)
 
-if 'win' in sys.platform:
-    edfapi = cdll.LoadLibrary('edfapi.dll')
-else:
-    edfapi = cdll.LoadLibrary('libedfapi.so')
+# find and load the library
+fname = util.find_library('edfapi')
+if fname is None:
+    raise OSError('edfapi not found')
+edfapi = CDLL(fname)
 
 
+# Extract the functions we need
 class LSTRING(Structure):
     pass
 
