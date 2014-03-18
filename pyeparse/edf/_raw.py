@@ -9,7 +9,7 @@ from functools import partial
 
 
 from ._edf2py import (edf_open_file, edf_close_file, edf_get_next_data,
-                      String, edf_get_preamble_text_length,
+                      edf_get_preamble_text_length,
                       edf_get_preamble_text, edf_get_recording_data,
                       edf_get_sample_data, edf_get_event_data)
 from .._baseraw import _BaseRaw

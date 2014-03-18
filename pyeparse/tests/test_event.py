@@ -5,7 +5,7 @@ from nose.tools import assert_true
 from numpy.testing import assert_equal
 
 from pyeparse import Raw
-from pyeparse.event import Discrete
+from pyeparse._event import Discrete
 
 warnings.simplefilter('always')  # in case we hit warnings
 
