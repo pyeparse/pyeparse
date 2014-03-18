@@ -108,13 +108,14 @@ def _read_raw_edf(fname):
     # Put into correct output format
     #
     discrete = dict()
-    for key in ('saccades', 'fixations', 'blinks',
-                'buttons', 'inputs', 'messages'):
+    info = res['info']
+    info['event_types'] = ('saccades', 'fixations', 'blinks',
+                           'buttons', 'inputs', 'messages')
+    for key in info['event_types']:
         discrete[key] = res[key]
     discrete['messages']['time'] = np.array(discrete['messages']['time'],
                                             np.float64)
     times = res['samples'][0].copy()
-    info = res['info']
     t_zero = 0  # XXX NEED TO FIX TIME OFFSETS
     return info, discrete, times, res['samples'], t_zero
 
