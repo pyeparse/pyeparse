@@ -38,5 +38,15 @@ python ctypesgen.py --insert-file edf2py_extra.py --cpp="cl -EP" -a -l edfapi -o
     a. edf2py.py
     b. edfapi.dll (or platform dependent equivelent lib)
 
+=========================================
 
+HOWTO: Make wrapper on Linux
+
+1. Install ctypesgen.
+
+2. Install EyeLink software.
+
+3. Run "ctypesgen.py -a -l edfapi -o _edf2py.py /usr/include/edf.h"
+
+The current version based on ideas from that file, but much simplified.
  

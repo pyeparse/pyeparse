@@ -12,8 +12,11 @@ from .viz import plot_calibration, plot_heatmap_raw
 class _BaseRaw(object):
     """Base class for Raw"""
     def __init__(self):
-        # XXX Add more checks
         assert self._samples.shape[0] == len(self.info['sample_fields'])
+        assert self.times[0] == 0
+        assert isinstance(self.info['sfreq'], float)
+        dt = np.abs(np.diff(self.times) - (1. / self.info['sfreq']))
+        assert np.all(dt < 1e-6)
 
     def __repr__(self):
         return '<Raw | {0} samples>'.format(self.n_samples)
