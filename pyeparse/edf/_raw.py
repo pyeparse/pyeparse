@@ -37,7 +37,7 @@ class RawEDF(_BaseRaw):
 class _edf_open(object):
     """Context manager for opening EDF files"""
     def __init__(self, fname):
-        self.fname = op.normpath(op.abspath(fname))
+        self.fname = op.normpath(op.abspath(fname).encode("ASCII"))
         self.fid = None
 
     def __enter__(self):
@@ -169,18 +169,6 @@ def _parse_preamble(edf):
     return info
 
 
-def _to_dict(element):
-    """Returns a dict containing all 'public' fields of the element struct"""
-    element_dict = dict()
-    for k in [a for a in dir(element) if not a.startswith('_')]:
-        v = getattr(element, k)
-        if hasattr(v, '_length_'):
-            element_dict[k] = [vv for vv in v]
-        else:
-            element_dict[k] = v
-    return element_dict
-
-
 def _to_list(element, keys, idx):
     """Return a list of particular fields of an EyeLink data element"""
     out = list()
@@ -222,6 +210,7 @@ def _sample_fields_available(sflags):
     )
 
 
+'''
 def _event_fields_available(eflags):
     """
     Returns a dict where the keys indicate fields (or field groups) of an
@@ -244,6 +233,7 @@ def _event_fields_available(eflags):
         endpos=bool(eflags & defines.READ_ENDPOS),
         avgpos=bool(eflags & defines.READ_AVGPOS),
     )
+'''
 
 
 _pp2el = dict(eye='eye', time='time', stime='sttime', etime='entime',
@@ -298,7 +288,6 @@ def _handle_sample(edf, res):
 
 def _handle_message(edf, res):
     """MESSAGEEVENT"""
-    # XXX: getting msg text should be this hard, look into how to access str
     e = edf_get_event_data(edf).contents
     msg = ct.string_at(ct.byref(e.message[0]), e.message.contents.len + 1)[2:]
     res['messages']['time'].append(e.sttime)
