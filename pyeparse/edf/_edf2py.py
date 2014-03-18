@@ -21,63 +21,56 @@ LSTRING._fields_ = [('len', c_short), ('c', c_char)]
 class FSAMPLE(Structure):
     pass
 
-FSAMPLE.__slots__ = ['time', 'px', 'py', 'hx', 'hy', 'pa', 'gx', 'gy',
-                     'rx', 'ry', 'gxvel', 'gyvel', 'hxvel', 'hyvel',
-                     'rxvel', 'ryvel', 'fgxvel', 'fgyvel',
-                     'fhxvel', 'fhyvel', 'frxvel', 'fryvel',
-                     'hdata', 'flags', 'input', 'buttons', 'htype', 'errors']
-FSAMPLE._fields_ = [('time', c_uint), ('px', c_float * 2),
-                    ('py', c_float * 2), ('hx', c_float * 2),
-                    ('hy', c_float * 2), ('pa', c_float * 2),
-                    ('gx', c_float * 2), ('gy', c_float * 2),
-                    ('rx', c_float), ('ry', c_float),
-                    ('gxvel', c_float * 2), ('gyvel', c_float * 2),
-                    ('hxvel', c_float * 2), ('hyvel', c_float * 2),
-                    ('rxvel', c_float * 2), ('ryvel', c_float * 2),
-                    ('fgxvel', c_float * 2), ('fgyvel', c_float * 2),
-                    ('fhxvel', c_float * 2), ('fhyvel', c_float * 2),
-                    ('frxvel', c_float * 2), ('fryvel', c_float * 2),
-                    ('hdata', c_short * 8), ('flags', c_ushort),
-                    ('input', c_ushort), ('buttons', c_ushort),
-                    ('htype', c_short), ('errors', c_ushort)]
+cf = c_float
+cf2 = c_float * 2
+FSAMPLE.__slots__ = [
+    'time', 'px', 'py', 'hx', 'hy', 'pa', 'gx', 'gy', 'rx', 'ry',
+    'gxvel', 'gyvel', 'hxvel', 'hyvel', 'rxvel', 'ryvel', 'fgxvel', 'fgyvel',
+    'fhxvel', 'fhyvel', 'frxvel', 'fryvel', 'hdata', 'flags', 'input',
+    'buttons', 'htype', 'errors']
+FSAMPLE._fields_ = [
+    ('time', c_uint), ('px', cf2), ('py', cf2), ('hx', cf2),
+    ('hy', cf2), ('pa', cf2), ('gx', cf2), ('gy', cf2),
+    ('rx', cf), ('ry', cf), ('gxvel', cf2), ('gyvel', cf2),
+    ('hxvel', cf2), ('hyvel', cf2), ('rxvel', cf2), ('ryvel', cf2),
+    ('fgxvel', cf2), ('fgyvel', cf2), ('fhxvel', cf2), ('fhyvel', cf2),
+    ('frxvel', cf2), ('fryvel', cf2), ('hdata', c_short * 8),
+    ('flags', c_ushort), ('input', c_ushort), ('buttons', c_ushort),
+    ('htype', c_short), ('errors', c_ushort)]
 
 
 class FEVENT(Structure):
     pass
 
-FEVENT.__slots__ = ['time', 'type', 'read', 'sttime', 'entime', 'hstx', 'hsty',
-                    'gstx', 'gsty', 'sta', 'henx', 'heny', 'genx', 'geny',
-                    'ena', 'havx', 'havy', 'gavx', 'gavy', 'ava', 'avel',
-                    'pvel', 'svel', 'evel', 'supd_x', 'eupd_x', 'supd_y',
-                    'eupd_y', 'eye', 'status', 'flags', 'input', 'buttons',
-                    'parsedby', 'message']
-FEVENT._fields_ = [('time', c_uint), ('type', c_short), ('read', c_ushort),
-                   ('sttime', c_uint), ('entime', c_uint), ('hstx', c_float),
-                   ('hsty', c_float), ('gstx', c_float), ('gsty', c_float),
-                   ('sta', c_float), ('henx', c_float), ('heny', c_float),
-                   ('genx', c_float), ('geny', c_float), ('ena', c_float),
-                   ('havx', c_float), ('havy', c_float), ('gavx', c_float),
-                   ('gavy', c_float), ('ava', c_float), ('avel', c_float),
-                   ('pvel', c_float), ('svel', c_float), ('evel', c_float),
-                   ('supd_x', c_float), ('eupd_x', c_float),
-                   ('supd_y', c_float), ('eupd_y', c_float), ('eye', c_short),
-                   ('status', c_ushort), ('flags', c_ushort),
-                   ('input', c_ushort), ('buttons', c_ushort),
-                   ('parsedby', c_ushort), ('message', POINTER(LSTRING))]
+FEVENT.__slots__ = [
+    'time', 'type', 'read', 'sttime', 'entime', 'hstx', 'hsty', 'gstx', 'gsty',
+    'sta', 'henx', 'heny', 'genx', 'geny', 'ena', 'havx', 'havy',
+    'gavx', 'gavy', 'ava', 'avel', 'pvel', 'svel', 'evel', 'supd_x',
+    'eupd_x', 'supd_y', 'eupd_y', 'eye', 'status', 'flags', 'input', 'buttons',
+    'parsedby', 'message']
+FEVENT._fields_ = [
+    ('time', c_uint), ('type', c_short), ('read', c_ushort),
+    ('sttime', c_uint), ('entime', c_uint), ('hstx', cf), ('hsty', cf),
+    ('gstx', cf), ('gsty', cf), ('sta', cf), ('henx', cf), ('heny', cf),
+    ('genx', cf), ('geny', cf), ('ena', cf), ('havx', cf), ('havy', cf),
+    ('gavx', cf), ('gavy', cf), ('ava', cf), ('avel', cf), ('pvel', cf),
+    ('svel', cf), ('evel', cf), ('supd_x', cf), ('eupd_x', cf),
+    ('supd_y', cf), ('eupd_y', cf), ('eye', c_short), ('status', c_ushort),
+    ('flags', c_ushort), ('input', c_ushort), ('buttons', c_ushort),
+    ('parsedby', c_ushort), ('message', POINTER(LSTRING))]
 
 
 class RECORDINGS(Structure):
     pass
 
-RECORDINGS.__slots__ = ['time', 'sample_rate', 'eflags', 'sflags', 'state',
-                        'record_type', 'pupil_type', 'recording_mode',
-                        'filter_type', 'pos_type', 'eye']
-RECORDINGS._fields_ = [('time', c_uint), ('sample_rate', c_float),
-                       ('eflags', c_ushort), ('sflags', c_ushort),
-                       ('state', c_ubyte), ('record_type', c_ubyte),
-                       ('pupil_type', c_ubyte), ('recording_mode', c_ubyte),
-                       ('filter_type', c_ubyte), ('pos_type', c_ubyte),
-                       ('eye', c_ubyte)]
+RECORDINGS.__slots__ = [
+    'time', 'sample_rate', 'eflags', 'sflags', 'state', 'record_type',
+    'pupil_type', 'recording_mode', 'filter_type', 'pos_type', 'eye']
+RECORDINGS._fields_ = [
+    ('time', c_uint), ('sample_rate', cf), ('eflags', c_ushort),
+    ('sflags', c_ushort), ('state', c_ubyte), ('record_type', c_ubyte),
+    ('pupil_type', c_ubyte), ('recording_mode', c_ubyte),
+    ('filter_type', c_ubyte), ('pos_type', c_ubyte), ('eye', c_ubyte)]
 
 
 class EDFFILE(Structure):
