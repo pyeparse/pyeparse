@@ -14,7 +14,7 @@ descr = """PyLinkParse project for eye tracking data analysis."""
 with open(os.path.join('pyeparse', '__init__.py'), 'r') as fid:
     for line in fid:
         if '__version__' in line:
-            version = line.strip().split(' = ')[1].decode('utf-8')
+            version = line.strip().split(' = ')[1]
             break
 
 DISTNAME = 'pyeparse'
