@@ -125,10 +125,10 @@ def _extract_sys_info(line):
 
 
 def _parse_preamble(edf):
-    txt = String()
     tlen = edf_get_preamble_text_length(edf)
-    edf_get_preamble_text(edf, txt, tlen+1)
-    preamble_lines = txt.split('\n')
+    txt = ct.create_string_buffer(tlen)
+    edf_get_preamble_text(edf, txt, tlen + 1)
+    preamble_lines = txt.value.split('\n')
     info = dict()
     for line in preamble_lines:
         if '!MODE'in line:

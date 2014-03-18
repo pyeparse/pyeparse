@@ -1093,7 +1093,7 @@ if hasattr(_libs['edfapi'], 'edf_get_element_count'):
 # <input>: 780
 if hasattr(_libs['edfapi'], 'edf_get_preamble_text'):
     edf_get_preamble_text = _libs['edfapi'].edf_get_preamble_text
-    edf_get_preamble_text.argtypes = [POINTER(EDFFILE), String, c_int]
+    edf_get_preamble_text.argtypes = [POINTER(EDFFILE), c_char_p, c_int]
     edf_get_preamble_text.restype = c_int
 
 # <input>: 795
