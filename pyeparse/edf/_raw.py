@@ -121,6 +121,7 @@ def _read_raw_edf(fname):
     #
     # XXX This will need to be fixed for files with multiple starts/stops...
     data = res['samples'][1:]
+    data[data >= 100000000.0 - 1] = np.nan
     orig_times = res['samples'][0]  # original times
     assert np.array_equal(orig_times, np.sort(orig_times))
     times = np.arange(len(orig_times), dtype=np.float64) / info['sfreq']
@@ -146,6 +147,11 @@ def _extract_calibration(info, messages):
     for msg in messages['msg']:
         if msg.startswith('!CAL') or msg.startswith('VALIDATE'):
             lines.append(msg)
+        if msg.startswith('GAZE_COORDS'):
+            coords = msg.split()[-4:]
+            coords = [int(round(float(c))) for c in coords]
+            info['screen_coords'] = [coords[2] - coords[0] + 1,
+                                     coords[3] - coords[1] + 1]
     calibrations = list()
     keys = ['point-x', 'point-y', 'offset', 'diff-x', 'diff-y']
     li = 0

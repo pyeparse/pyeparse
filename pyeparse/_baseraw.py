@@ -6,7 +6,7 @@ import numpy as np
 
 from ._event import find_events
 from ._py23 import string_types
-from .viz import plot_calibration, plot_heatmap_raw
+from .viz import plot_calibration, plot_heatmap_raw, plot_raw
 
 
 class _BaseRaw(object):
@@ -70,6 +70,25 @@ class _BaseRaw(object):
             The resulting figure object
         """
         return plot_calibration(raw=self, title=title, show=show)
+
+    def plot(self, events=None, title='Raw', show=True):
+        """Visualize calibration
+
+        Parameters
+        ----------
+        events : array | None
+            Events associated with the Raw instance.
+        title : str
+            The title to be displayed.
+        show : bool
+            Whether to show the figure or not.
+
+        Returns
+        -------
+        fig : matplotlib.figure.Figure instance
+            The resulting figure object.
+        """
+        return plot_raw(raw=self, events=events, title=title, show=show)
 
     def plot_heatmap(self, start=None, stop=None, cmap=None,
                      title=None, kernel=dict(size=100, half_width=50),
@@ -190,12 +209,14 @@ class _BaseRaw(object):
         assert len(starts) == len(ends)
         for stime, etime in zip(starts, ends):
             sidx, eidx = self.time_as_index([stime, etime])
-            vals = self['ps', sidx:eidx][0]
+            ps_vals = self['ps', sidx:eidx][0]
             if interp is None:
                 fix = np.nan
             elif interp == 'zoh':
-                fix = vals[0]
+                fix = ps_vals[0]
             elif interp == 'linear':
                 len_ = eidx - sidx
-                fix = np.linspace(vals[0], vals[-1], len_)
-            vals[:] = fix
+                fix = np.linspace(ps_vals[0], ps_vals[-1], len_)
+            vals = self[:, sidx:eidx][0]
+            vals[:] = np.nan
+            ps_vals[:] = fix
