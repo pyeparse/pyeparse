@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Authors: Denis Engemann <d.engemann@fz-juelich.de>
 #
 # License: BSD (3-clause)
@@ -7,9 +8,10 @@ import numpy as np
 from scipy.optimize import fmin_slsqp
 import warnings
 
-from .event import Discrete
+from ._event import Discrete
 from .viz import plot_epochs
-from .utils import string_types, discrete_types, pupil_kernel
+from .utils import discrete_types, pupil_kernel
+from ._py23 import string_types
 from .parallel import parallel_func
 
 
@@ -136,14 +138,16 @@ class Epochs(object):
             for kind in raw.info['event_types']:
                 this_disc = discretes[kind]
                 df = raw.discrete[kind]
-                idx = np.where((df['stime'] >= this_tmin) &
-                               (df['etime'] <= this_tmax))
+                comp_1 = df['stime']
+                comp_2 = df['etime'] if 'etime' in df else df['stime']
+                idx = np.where((comp_1 >= this_tmin) & (comp_2 <= this_tmax))
                 for ii in idx:
                     subdict = dict()
                     for key in df.keys():
                         subdict[key] = df[key][idx].copy()
                     subdict['stime'] -= this_time
-                    subdict['etime'] -= this_time
+                    if 'etime' in subdict:
+                        subdict['etime'] -= this_time
                     this_disc.append(subdict)
         events = events[keep_idx]
         sample_inds = np.array(sample_inds)

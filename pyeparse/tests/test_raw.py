@@ -24,7 +24,7 @@ def test_raw_io():
         if fi == 0:  # First test file has this property
             for kind in ['saccades', 'fixations', 'blinks']:
                 # relax, depends on data
-                assert_true(raw.discrete[kind]['stime'][0] < 5.0)
+                assert_true(raw.discrete[kind]['stime'][0] < 12.0)
         assert_true(raw.times[0] < 1.0)
         raw.remove_blink_artifacts(use_only_blink=True)
         for interp in [None, 'zoh', 'linear']:

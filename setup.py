@@ -1,14 +1,21 @@
+# -*- coding: utf-8 -*-
 # Authors: Denis Engemann <d.engemann@fz-juelich.de>
 #
 # License: BSD (3-clause)
 
 import os
-import pyeparse
 
 import setuptools  # analysis:ignore noqa we are using a setuptools namespace
 from numpy.distutils.core import setup
 
 descr = """PyLinkParse project for eye tracking data analysis."""
+
+# get version
+with open(os.path.join('pyeparse', '__init__.py'), 'r') as fid:
+    for line in fid:
+        if '__version__' in line:
+            version = line.strip().split(' = ')[1]
+            break
 
 DISTNAME = 'pyeparse'
 DESCRIPTION = descr
@@ -16,7 +23,7 @@ MAINTAINER = 'Denis A. Engemann'
 MAINTAINER_EMAIL = 'd.engemann@fz-juelich.de'
 LICENSE = 'BSD (3-clause)'
 DOWNLOAD_URL = 'https://github.com/dengemann/PyLinkParse.git'
-VERSION = pyeparse.__version__
+VERSION = version
 
 
 if __name__ == "__main__":
@@ -44,4 +51,6 @@ if __name__ == "__main__":
                        'Operating System :: Unix',
                        'Operating System :: MacOS'],
           platforms='any',
-          packages=['pyeparse', 'pyeparse.tests'])
+          packages=['pyeparse', 'pyeparse.tests',
+                    'pyeparse.edf',
+                    ])

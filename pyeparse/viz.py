@@ -6,7 +6,49 @@ import numpy as np
 import math
 from collections import deque
 from functools import partial
-from .utils import create_chunks, fwhm_kernel_2d, string_types
+from .utils import create_chunks, fwhm_kernel_2d
+from ._py23 import string_types
+
+
+def plot_raw(raw, events=None, title='Raw', show=True):
+    """Visualize raw data traces
+
+    Parameters
+    ----------
+    raw : instance of pyeparse raw
+        The raw object to be visualized
+    events : array | None
+        Events associated with the Raw instance.
+    title : str
+        The title to be displayed.
+    show : bool
+        Whether to show the figure or not.
+
+    Returns
+    -------
+    fig : matplotlib.figure.Figure instance
+        The resulting figure object.
+    """
+    import matplotlib.pyplot as mpl
+    data, times = raw[:, :]
+    names = raw.info['sample_fields']
+    ev_x = np.array([0], int) if events is None else events[:, 0]
+    fig = mpl.figure()
+    n_row = len(names)
+    ax0 = None
+    for ii, (d, n) in enumerate(zip(data, names)):
+        ax = mpl.subplot(n_row, 1, ii + 1, sharex=ax0)
+        if ax0 is None:
+            ax0 = ax
+        ev_y = np.tile(np.array([np.min(d), np.max(d), np.nan]), len(ev_x))
+        ax.plot(np.repeat(times[ev_x], 3), ev_y, color='y')
+        ax.plot(times, d, color='k')
+        if ii == n_row - 1:
+            ax.set_xlabel('Time (sec)')
+        ax.set_ylabel(n)
+    if show:
+        mpl.show()
+    return fig
 
 
 def plot_calibration(raw, title='Calibration', show=True):
@@ -28,9 +70,9 @@ def plot_calibration(raw, title='Calibration', show=True):
     """
     import matplotlib.pyplot as mpl
     figs = []
-    if 'calibration' not in raw.info:
+    if 'calibrations' not in raw.info:
         raise RuntimeError('No calibration found in raw')
-    for cal in raw.info['calibration']:
+    for cal in raw.info['calibrations']:
         fig = mpl.figure()
         figs.append(fig)
         px, py = cal['point-x'], cal['point-y']
@@ -143,7 +185,7 @@ def plot_heatmap_raw(raw, start=None, stop=None, cmap=None,
     import matplotlib.pyplot as mpl
     if 'screen_coords' not in raw.info:
         raise RuntimeError('Raw object does not include '
-                           'screemncoordinates.')
+                           'screen coordinates.')
     width, height = raw.info['screen_coords']
     if isinstance(start, float):
         start = raw.time_as_index([start])[0]
