@@ -143,7 +143,7 @@ class Epochs(object):
                 idx = np.where((comp_1 >= this_tmin) & (comp_2 <= this_tmax))
                 for ii in idx:
                     subdict = dict()
-                    for key in df.keys():
+                    for key in df.dtype.names:
                         subdict[key] = df[key][idx].copy()
                     subdict['stime'] -= this_time
                     if 'etime' in subdict:

@@ -56,7 +56,8 @@ class _edf_open(object):
 
 
 _ets2pp = dict(SAMPLE_TYPE='sample', ENDFIX='fixations', ENDSACC='saccades',
-               ENDBLINK='blinks', BUTTONEVENT='buttons', INPUTEVENT='inputs')
+               ENDBLINK='blinks', BUTTONEVENT='buttons', INPUTEVENT='inputs',
+               MESSAGEEVENT='messages')
 
 
 def _read_raw_edf(fname):
@@ -90,8 +91,10 @@ def _read_raw_edf(fname):
         info['discrete_fields'] = dict()
         etype = None
         res = dict(info=info, samples=None, n_samps=n_samps, offsets=offsets,
-                   messages=dict(time=[], msg=[]), edf_fields=dict())
-        res['samples'] = np.empty((4, 1000), np.float64)
+                   edf_fields=dict(messages=['time', 'msg']), discrete=dict())
+        dtype = [('time', np.float64), ('msg', 'O')]
+        res['discrete']['messages'] = np.empty((n_samps['messages']),
+                                               dtype=dtype)
         while etype != event_constants.get('NO_PENDING_ITEMS'):
             etype = edf_get_next_data(edf)
             if etype not in event_constants:
@@ -102,24 +105,15 @@ def _read_raw_edf(fname):
     #
     # Put info and discrete into correct output format
     #
-    discrete = dict()
+    discrete = res['discrete']
     info = res['info']
     info['event_types'] = ('saccades', 'fixations', 'blinks',
                            'buttons', 'inputs')
     info['sample_fields'] = info['sample_fields'][1:]  # omit time
-    for key in info['event_types']:
-        src = res[key]
-        discrete[key] = dict()
-        for ii, sub_key in enumerate(info['discrete_fields'][key]):
-            discrete[key][sub_key] = src[ii]
-    discrete['messages'] = res['messages']
-    discrete['messages']['time'] = np.array(discrete['messages']['time'],
-                                            np.float64)
 
     #
     # fix sample times
     #
-    # XXX This will need to be fixed for files with multiple starts/stops...
     data = res['samples'][1:]
     data[data >= 100000000.0 - 1] = np.nan
     orig_times = res['samples'][0]  # original times
@@ -127,7 +121,7 @@ def _read_raw_edf(fname):
     times = np.arange(len(orig_times), dtype=np.float64) / info['sfreq']
     for key in list(info['event_types']) + ['messages']:
         for sub_key in ('stime', 'etime', 'time'):
-            if sub_key in discrete[key]:
+            if sub_key in discrete[key].dtype.names:
                 _adjust_time(discrete[key][sub_key], orig_times, times)
 
     _extract_calibration(info, discrete['messages'])
@@ -330,8 +324,11 @@ def _handle_message(edf, res):
     """MESSAGEEVENT"""
     e = edf_get_event_data(edf).contents
     msg = ct.string_at(ct.byref(e.message[0]), e.message.contents.len + 1)[2:]
-    res['messages']['time'].append(e.sttime)
-    res['messages']['msg'].append(msg.decode('ASCII'))
+    time = e.sttime
+    off = res['offsets']['messages']
+    res['discrete']['messages']['time'][off] = time
+    res['discrete']['messages']['msg'][off] = msg.decode('ASCII')
+    res['offsets']['messages'] += 1
 
 
 def _handle_end(edf, res, name):
@@ -352,12 +349,14 @@ def _handle_end(edf, res, name):
         else:
             raise KeyError('Unknown name %s' % name)
         res['edf_fields'][name] = f
-        res['info']['discrete_fields'][name] = [_el2pp[field] for field in f]
-        res[name] = np.empty((len(f), res['n_samps'][name]), np.float64)
+        our_names = [_el2pp[field] for field in f]
+        dtype = [(ff, np.float64) for ff in our_names]
+        res['discrete'][name] = np.empty(res['n_samps'][name], dtype=dtype)
     e = edf_get_event_data(edf).contents
     vals = _to_list(e, res['edf_fields'][name], res['eye_idx'])
     off = res['offsets'][name]
-    res[name][:, off] = vals
+    for ff, vv in zip(res['discrete'][name].dtype.names, vals):
+        res['discrete'][name][ff][off] = vv
     res['offsets'][name] += 1
 
 
