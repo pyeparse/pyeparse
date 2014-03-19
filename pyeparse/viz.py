@@ -75,8 +75,8 @@ def plot_calibration(raw, title='Calibration', show=True):
     for cal in raw.info['calibrations']:
         fig = mpl.figure()
         figs.append(fig)
-        px, py = cal['point-x'], cal['point-y']
-        dx, dy = cal['diff-x'], cal['diff-y']
+        px, py = cal['point_x'], cal['point_y']
+        dx, dy = cal['diff_x'], cal['diff_y']
 
         mpl.title(title)
         mpl.scatter(px, py, color='gray')

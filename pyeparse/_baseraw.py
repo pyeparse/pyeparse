@@ -3,6 +3,8 @@
 # License: BSD (3-clause)
 
 import numpy as np
+from os import path as op
+from copy import deepcopy
 
 from ._event import find_events
 from ._py23 import string_types
@@ -13,9 +15,11 @@ class _BaseRaw(object):
     """Base class for Raw"""
     def __init__(self):
         assert self._samples.shape[0] == len(self.info['sample_fields'])
-        assert self.times[0] == 0
+        assert self.times[0] == 0.0
         assert isinstance(self.info['sfreq'], float)
         dt = np.abs(np.diff(self.times) - (1. / self.info['sfreq']))
+        self.info['screen_coords'] = np.array(self.info['screen_coords'],
+                                              np.float64)
         assert np.all(dt < 1e-6)
 
     def __repr__(self):
@@ -46,6 +50,54 @@ class _BaseRaw(object):
             raise KeyError('key "%s" not in sample fields %s'
                            % (key, self.info['sample_fields']))
         return self.info['sample_fields'].index(key)
+
+    def save(self, fname, overwrite=False):
+        """Save data to HD5 format
+
+        Parameters
+        ----------
+        fname : str
+            Filename to use.
+        overwrite : bool
+            If True, overwrite file (if it exists).
+        """
+        if op.isfile(fname) and not overwrite:
+            raise IOError('file "%s" exists, use overwrite=True to overwrite'
+                          % fname)
+        try:
+            import tables
+        except Exception:
+            raise ImportError('pytables could not be imported')
+        with tables.openFile(fname, mode='w') as fid:
+            # samples
+            s = np.core.records.fromarrays(self._samples)
+            s.dtype.names = self.info['sample_fields']
+            fid.createTable('/', 'samples', s)
+            # times
+            s = np.core.records.fromarrays([self._times])
+            fid.createTable('/', 'times', s)
+            # discrete
+            dg = fid.createGroup('/', 'discrete')
+            for key, val in self.discrete.items():
+                fid.createTable(dg, key, val)
+            # info (harder)
+            info = deepcopy(self.info)
+            info['meas_date'] = info['meas_date'].isoformat()
+            items = [('eye', '|S256'),
+                     ('camera', '|S256'),
+                     ('camera_config', '|S256'),
+                     ('meas_date', '|S32'),
+                     ('ps_units', '|S16'),
+                     ('screen_coords', 'f8', self.info['screen_coords'].shape),
+                     ('serial', '|S256'),
+                     ('sfreq', 'f8'),
+                     ('version', '|S256'),
+                     ]
+            vals = [tuple([info[ii[0]] for ii in items])]
+            data = np.array(vals, dtype=items)
+            fid.createTable('/', 'info', data)
+            # calibrations
+            fid.createTable('/', 'calibrations', self.info['calibrations'])
 
     @property
     def n_samples(self):

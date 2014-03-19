@@ -53,4 +53,5 @@ if __name__ == "__main__":
           platforms='any',
           packages=['pyeparse', 'pyeparse.tests',
                     'pyeparse.edf',
+                    'pyeparse.hd5', 'pyeparse.hd5.tests',
                     ])

@@ -6,7 +6,7 @@ from os import path as op
 import ctypes as ct
 from datetime import datetime
 from functools import partial
-
+import warnings
 
 from ._edf2py import (edf_open_file, edf_close_file, edf_get_next_data,
                       edf_get_preamble_text_length,
@@ -15,6 +15,8 @@ from ._edf2py import (edf_open_file, edf_close_file, edf_get_next_data,
 from .._baseraw import _BaseRaw
 from ._defines import event_constants
 from . import _defines as defines
+
+_MAX_MSG_LEN = 260  # maxmimum message length we'll need to store
 
 
 class RawEDF(_BaseRaw):
@@ -91,7 +93,7 @@ def _read_raw_edf(fname):
         etype = None
         res = dict(info=info, samples=None, n_samps=n_samps, offsets=offsets,
                    edf_fields=dict(messages=['stime', 'msg']), discrete=dict())
-        dtype = [('stime', np.float64), ('msg', 'O')]
+        dtype = [('stime', np.float64), ('msg', '|S%s' % _MAX_MSG_LEN)]
         res['discrete']['messages'] = np.empty((n_samps['messages']),
                                                dtype=dtype)
         while etype != event_constants.get('NO_PENDING_ITEMS'):
@@ -146,7 +148,7 @@ def _extract_calibration(info, messages):
             info['screen_coords'] = [coords[2] - coords[0] + 1,
                                      coords[3] - coords[1] + 1]
     calibrations = list()
-    keys = ['point-x', 'point-y', 'offset', 'diff-x', 'diff-y']
+    keys = ['point_x', 'point_y', 'offset', 'diff_x', 'diff_y']
     li = 0
     while(li < len(lines)):
         line = lines[li]
@@ -162,14 +164,14 @@ def _extract_calibration(info, messages):
                                            xy_diff[0], xy_diff[1]]]
                 this_validation.append(vals)
             li += n_points
-            this_validation = np.array(this_validation).T
-            out = dict()
-            assert len(keys) == len(this_validation)
-            for key, val in zip(keys, this_validation):
-                out[key] = val
+            this_validation = np.array(this_validation)
+            dtype = [(key, 'f8') for key in keys]
+            out = np.empty(len(this_validation), dtype=dtype)
+            for key, data in zip(keys, this_validation.T):
+                out[key] = data
             calibrations.append(out)
         li += 1
-    info['calibrations'] = calibrations
+    info['calibrations'] = np.array(calibrations)
 
 
 def _extract_sys_info(line):
@@ -323,9 +325,13 @@ def _handle_message(edf, res):
     """MESSAGEEVENT"""
     e = edf_get_event_data(edf).contents
     msg = ct.string_at(ct.byref(e.message[0]), e.message.contents.len + 1)[2:]
+    msg = msg.decode('ASCII')
+    if len(msg) > _MAX_MSG_LEN:
+        warnings.warn('Message truncated to %s characters:\n%s'
+                      % (_MAX_MSG_LEN, msg))
     off = res['offsets']['messages']
     res['discrete']['messages']['stime'][off] = e.sttime
-    res['discrete']['messages']['msg'][off] = msg.decode('ASCII')
+    res['discrete']['messages']['msg'][off] = msg[:_MAX_MSG_LEN]
     res['offsets']['messages'] += 1
 
 
