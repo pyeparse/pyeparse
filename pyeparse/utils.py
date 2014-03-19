@@ -6,9 +6,6 @@ import numpy as np
 from os import path as op
 import glob
 
-# Store these in one place
-discrete_types = ['saccades', 'fixations', 'blinks']
-
 
 def create_chunks(sequence, size):
     """Generate chunks from a sequence

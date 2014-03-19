@@ -88,11 +88,10 @@ def _read_raw_edf(fname):
     #
     with _edf_open(fname) as edf:
         info = _parse_preamble(edf)
-        info['discrete_fields'] = dict()
         etype = None
         res = dict(info=info, samples=None, n_samps=n_samps, offsets=offsets,
-                   edf_fields=dict(messages=['time', 'msg']), discrete=dict())
-        dtype = [('time', np.float64), ('msg', 'O')]
+                   edf_fields=dict(messages=['stime', 'msg']), discrete=dict())
+        dtype = [('stime', np.float64), ('msg', 'O')]
         res['discrete']['messages'] = np.empty((n_samps['messages']),
                                                dtype=dtype)
         while etype != event_constants.get('NO_PENDING_ITEMS'):
@@ -107,8 +106,8 @@ def _read_raw_edf(fname):
     #
     discrete = res['discrete']
     info = res['info']
-    info['event_types'] = ('saccades', 'fixations', 'blinks',
-                           'buttons', 'inputs')
+    event_types = ('saccades', 'fixations', 'blinks', 'buttons', 'inputs',
+                   'messages')
     info['sample_fields'] = info['sample_fields'][1:]  # omit time
 
     #
@@ -119,8 +118,8 @@ def _read_raw_edf(fname):
     orig_times = res['samples'][0]  # original times
     assert np.array_equal(orig_times, np.sort(orig_times))
     times = np.arange(len(orig_times), dtype=np.float64) / info['sfreq']
-    for key in list(info['event_types']) + ['messages']:
-        for sub_key in ('stime', 'etime', 'time'):
+    for key in event_types:
+        for sub_key in ('stime', 'etime'):
             if sub_key in discrete[key].dtype.names:
                 _adjust_time(discrete[key][sub_key], orig_times, times)
 
@@ -324,16 +323,15 @@ def _handle_message(edf, res):
     """MESSAGEEVENT"""
     e = edf_get_event_data(edf).contents
     msg = ct.string_at(ct.byref(e.message[0]), e.message.contents.len + 1)[2:]
-    time = e.sttime
     off = res['offsets']['messages']
-    res['discrete']['messages']['time'][off] = time
+    res['discrete']['messages']['stime'][off] = e.sttime
     res['discrete']['messages']['msg'][off] = msg.decode('ASCII')
     res['offsets']['messages'] += 1
 
 
 def _handle_end(edf, res, name):
     """ENDSACC, ENDFIX, ENDBLINK, BUTTONS, INPUT"""
-    if name not in res['info']['discrete_fields']:
+    if name not in res['discrete']:
         # XXX This should be changed to support given fields
         if name == 'saccades':
             f = ['eye', 'sttime', 'entime',
