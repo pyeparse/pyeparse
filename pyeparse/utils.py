@@ -93,3 +93,17 @@ def _has_joblib():
         return False
     else:
         return True
+
+
+def _has_pytables():
+    """Helper to determine if joblib is installed"""
+    try:
+        import tables  # noqa
+    except Exception:
+        return False
+    else:
+        return True
+
+
+_requires_pytables = np.testing.dec.skipif(not _has_pytables(),
+                                           'Requires pytables')

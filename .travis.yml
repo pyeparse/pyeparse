@@ -11,7 +11,7 @@ env:
     - PYTHON=2.6 DEPS=full
     - PYTHON=2.7 DEPS=full  # note: this runs python-pandas (old version)
     - PYTHON=3.3 DEPS=full
-    - PYTHON=3.3 DEPS=minimal  # pandas, joblib optional
+    - PYTHON=3.3 DEPS=minimal  # pandas, joblib, pytables optional
     - PYTHON=2.7 DEPS=minimal
 
 before_install:
@@ -26,11 +26,11 @@ before_install:
 install:
     - if [ "${PYTHON}" == "2.7" ]; then
         travis_retry sudo apt-get -qq update;
-        travis_retry sudo apt-get -qq install python-scipy python-nose python-matplotlib python-tables;
+        travis_retry sudo apt-get -qq install python-scipy python-nose python-matplotlib;
       else
         conda create -n testenv --yes --quiet pip python=$PYTHON;
         source activate testenv;
-        conda install --yes --quiet scipy nose matplotlib pytables;
+        conda install --yes --quiet scipy nose matplotlib;
       fi;
     # edf2asc
     - echo "deb http://archive.canonical.com/ lucid partner" | sudo tee -a /etc/apt/sources.list
@@ -38,12 +38,12 @@ install:
     - travis_retry sudo apt-get -qq update
     - travis_retry sudo apt-get -qq install -y --force-yes edfapi-3.1
     - sudo ldconfig
-    # pandas, joblib
+    # pandas, joblib, pytables
     - if [ "${DEPS}" == "full" ]; then
         if [ "${PYTHON}" == "2.7" ]; then
-          travis_retry sudo apt-get -qq install python-pandas python-joblib;
+          travis_retry sudo apt-get -qq install python-pandas python-joblib python-tables;
         else
-          conda install --yes --quiet pandas;
+          conda install --yes --quiet pandas pytables;
           pip install joblib;
         fi;
       fi;

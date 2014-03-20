@@ -70,8 +70,6 @@ def plot_calibration(raw, title='Calibration', show=True):
     """
     import matplotlib.pyplot as mpl
     figs = []
-    if 'calibrations' not in raw.info:
-        raise RuntimeError('No calibration found in raw')
     for cal in raw.info['calibrations']:
         fig = mpl.figure()
         figs.append(fig)
@@ -81,8 +79,7 @@ def plot_calibration(raw, title='Calibration', show=True):
         mpl.title(title)
         mpl.scatter(px, py, color='gray')
         mpl.scatter(px - dx, py - dy, color='red')
-    if show:
-        mpl.show()
+    mpl.show() if show else None
     return figs
 
 
@@ -152,10 +149,8 @@ def plot_heatmap(xdata, ydata, width, height, cmap=None,
     mpl.imshow(canvas, extent=[0, width, 0, height],
                cmap=cmap, aspect='auto', origin='lower', vmin=vmin,
                vmax=vmax)
-    if colorbar:
-        mpl.colorbar()
-    if show:
-        mpl.show()
+    mpl.colorbar() if colorbar else None
+    mpl.show() if show else None
     return fig, canvas
 
 
@@ -203,10 +198,9 @@ def plot_heatmap_raw(raw, start=None, stop=None, cmap=None,
     mpl.title(title)
     mpl.xlabel('X position (px)')
     mpl.ylabel('y position (px)')
-    if colorbar:
-        mpl.colorbar()
-    if show:
-        mpl.show()
+
+    mpl.colorbar() if colorbar else None
+    mpl.show() if show else None
     return fig
 
 """

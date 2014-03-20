@@ -2,7 +2,6 @@
 """HD5 Raw class"""
 
 import numpy as np
-import tables
 from os import path as op
 from copy import deepcopy
 from datetime import datetime
@@ -19,6 +18,10 @@ class RawHD5(_BaseRaw):
         The name of the EDF file.
     """
     def __init__(self, fname):
+        try:
+            import tables
+        except:
+            raise ImportError('pytables is required but was not found')
         if not op.isfile(fname):
             raise IOError('file "%s" not found' % fname)
         info = dict()
@@ -28,7 +31,7 @@ class RawHD5(_BaseRaw):
             info['sample_fields'] = list(deepcopy(samples.dtype.names))
             samples = samples.view(np.float64).reshape(samples.shape[0], -1).T
             # times
-            times = fid.getNode('/', 'times').read().view(np.float64)
+            times = fid.getNode('/', 'times').read()
             # discrete
             discrete = dict()
             dg = fid.getNode('/', 'discrete')
@@ -41,8 +44,10 @@ class RawHD5(_BaseRaw):
             info['meas_date'] = datetime.strptime(info['meas_date'],
                                                   '%Y-%m-%dT%H:%M:%S')
             # calibrations
-            info['calibrations'] = fid.getNode('/', 'calibrations').read()
-            info['calibrations'] = np.atleast_2d(info['calibrations'])
+            cg = fid.getNode(fid.root, 'calibrations')
+            cals = np.array([fid.getNode(cg, 'c%s' % ii).read()
+                             for ii in range(len(cg.__members__))])
+            info['calibrations'] = cals
 
         self._samples = samples
         self._times = times

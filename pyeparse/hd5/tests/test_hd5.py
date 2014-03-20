@@ -4,13 +4,14 @@ from nose.tools import assert_raises, assert_true
 from os import path as op
 
 from pyeparse import Raw, RawHD5
-from pyeparse.utils import _get_test_fnames, _TempDir
+from pyeparse.utils import _get_test_fnames, _TempDir, _requires_pytables
 
 temp_dir = _TempDir()
 
 fnames = _get_test_fnames()
 
 
+@_requires_pytables
 def test_read_write_hd5():
     """Test reading and writing of HD5"""
     for fname in fnames:
@@ -19,8 +20,8 @@ def test_read_write_hd5():
         r.save(out_fname, overwrite=True)
         assert_raises(IOError, r.save, out_fname)  # overwrite=False
         r2 = RawHD5(out_fname)
-        #r2.save(out_fname, overwrite=True)
-        #r2 = RawHD5(out_fname)
+        r2.save(out_fname, overwrite=True)  # double write (make sure works)
+        r2 = RawHD5(out_fname)
         # samples
         assert_array_equal(r._samples, r2._samples)
         # times

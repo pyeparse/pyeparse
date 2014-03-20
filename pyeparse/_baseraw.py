@@ -68,16 +68,19 @@ class _BaseRaw(object):
             raise ImportError('pytables could not be imported')
         with tables.openFile(fname, mode='w') as fid:
             # samples
+            filters = tables.Filters(complib='zlib', complevel=5)
             s = np.core.records.fromarrays(self._samples)
             s.dtype.names = self.info['sample_fields']
-            fid.createTable('/', 'samples', s)
+            fid.createTable(fid.root, 'samples', s)
             # times
-            s = np.core.records.fromarrays([self._times])
-            fid.createTable('/', 'times', s)
+            atom = tables.Atom.from_dtype(self._times.dtype)
+            s = fid.createCArray(fid.root, 'times', atom,
+                                 self._times.shape, filters=filters)
+            s[:] = self._times
             # discrete
-            dg = fid.createGroup('/', 'discrete')
+            dg = fid.createGroup(fid.root, 'discrete')
             for key, val in self.discrete.items():
-                fid.createTable(dg, key, val)
+                fid.createTable(dg, key, val, filters=filters)
             # info (harder)
             info = deepcopy(self.info)
             info['meas_date'] = info['meas_date'].isoformat()
@@ -92,9 +95,11 @@ class _BaseRaw(object):
                      ('version', '|S256'),
                      ]
             data = np.array([tuple([info[t[0]] for t in items])], dtype=items)
-            fid.createTable('/', 'info', data)
+            fid.createTable(fid.root, 'info', data, filters=filters)
             # calibrations
-            fid.createTable('/', 'calibrations', self.info['calibrations'])
+            cg = fid.createGroup('/', 'calibrations')
+            for ci, cal in enumerate(self.info['calibrations']):
+                fid.createTable(cg, 'c%s' % ci, cal)
 
     @property
     def n_samples(self):
