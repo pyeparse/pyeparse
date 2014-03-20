@@ -43,7 +43,8 @@ install:
         if [ "${PYTHON}" == "2.7" ]; then
           travis_retry sudo apt-get -qq install python-pandas python-joblib;
         else
-          conda install --yes --quiet pandas joblib;
+          conda install --yes --quiet pandas;
+          pip install joblib;
         fi;
       fi;
     - pip install -q coveralls nose-timer flake8
