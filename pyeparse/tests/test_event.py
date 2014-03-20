@@ -1,8 +1,8 @@
 import numpy as np
 import warnings
 from os import path as op
-from nose.tools import assert_true
-from numpy.testing import assert_equal
+from nose.tools import assert_true, assert_raises
+from numpy.testing import assert_equal, assert_array_equal
 
 from pyeparse import Raw
 from pyeparse._event import Discrete
@@ -15,11 +15,11 @@ fname = op.join(op.dirname(__file__), 'data', 'test_2_raw.edf')
 def test_find_custom_events():
     """Test finding user-defined events"""
     raw = Raw(fname)
-    events2 = raw.find_events('TRIALID', 1)
-    assert_true(len(events2) > 0)
-    # XXX broken since continuity is not fixed for custom events
-    #     read after parsing
-    # assert_array_equal(events, events2)
+    events = raw.find_events('TRIALID', 1)
+    assert_true(len(events) > 0)
+    assert_raises(ValueError, raw.find_events, list(), 1)
+    events_2 = raw.find_events(lambda x: 'TRIALID' in x, 1)
+    assert_array_equal(events, events_2)
 
 
 def test_discrete():

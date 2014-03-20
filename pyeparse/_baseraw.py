@@ -18,8 +18,6 @@ class _BaseRaw(object):
         assert self.times[0] == 0.0
         assert isinstance(self.info['sfreq'], float)
         dt = np.abs(np.diff(self.times) - (1. / self.info['sfreq']))
-        self.info['screen_coords'] = np.array(self.info['screen_coords'],
-                                              np.float64)
         assert np.all(dt < 1e-6)
 
     def __repr__(self):
@@ -93,14 +91,14 @@ class _BaseRaw(object):
                      ('sfreq', 'f8'),
                      ('version', '|S256'),
                      ]
-            vals = [tuple([info[ii[0]] for ii in items])]
-            data = np.array(vals, dtype=items)
+            data = np.array([tuple([info[t[0]] for t in items])], dtype=items)
             fid.createTable('/', 'info', data)
             # calibrations
             fid.createTable('/', 'calibrations', self.info['calibrations'])
 
     @property
     def n_samples(self):
+        """Number of time samples"""
         return len(self.times)
 
     def __len__(self):
@@ -169,6 +167,7 @@ class _BaseRaw(object):
 
     @property
     def times(self):
+        """Time values"""
         return self._times
 
     def time_as_index(self, times):

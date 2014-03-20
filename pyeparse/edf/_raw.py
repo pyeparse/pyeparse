@@ -145,8 +145,8 @@ def _extract_calibration(info, messages):
         if msg.startswith('GAZE_COORDS'):
             coords = msg.split()[-4:]
             coords = [int(round(float(c))) for c in coords]
-            info['screen_coords'] = [coords[2] - coords[0] + 1,
-                                     coords[3] - coords[1] + 1]
+            info['screen_coords'] = np.array([coords[2] - coords[0] + 1,
+                                              coords[3] - coords[1] + 1], int)
     calibrations = list()
     keys = ['point_x', 'point_y', 'offset', 'diff_x', 'diff_y']
     li = 0

@@ -83,3 +83,13 @@ class _TempDir(str):
 
     def cleanup(self):
         rmtree(self._path, ignore_errors=True)
+
+
+def _has_joblib():
+    """Helper to determine if joblib is installed"""
+    try:
+        import joblib  # noqa
+    except Exception:
+        return False
+    else:
+        return True
