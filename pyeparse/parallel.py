@@ -65,6 +65,6 @@ def check_n_jobs(n_jobs, allow_cuda=False):
         n_jobs = min(n_cores + n_jobs + 1, n_cores)
         if n_jobs <= 0:
             raise ValueError('If n_jobs has a negative value it must not '
-                                'be less than the number of CPUs present. '
-                                'You\'ve got %s CPUs' % n_cores)
+                             'be less than the number of CPUs present. '
+                             'You\'ve got %s CPUs' % n_cores)
     return n_jobs
