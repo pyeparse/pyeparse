@@ -145,9 +145,9 @@ class _BaseRaw(object):
         """
         return plot_raw(raw=self, events=events, title=title, show=show)
 
-    def plot_heatmap(self, start=None, stop=None, cmap=None,
-                     title=None, kernel=dict(size=100, half_width=50),
-                     colorbar=None, show=True):
+    def plot_heatmap(self, start=None, stop=None, cmap=None, title=None,
+                     vmax=None, kernel=dict(size=100, half_width=50),
+                     colorbar=True, show=True):
         """ Plot heatmap of X/Y positions on canvas, e.g., screen
 
         Parameters
@@ -156,8 +156,16 @@ class _BaseRaw(object):
             Start time in seconds.
         stop : float | None
             End time in seconds.
+        cmap : matplotlib Colormap
+            The colormap to use.
         title : str
             The title to be displayed.
+        vmax : float | None
+            The maximum (and -minimum) value to use for the colormap.
+        kernel : dict
+            Parameters for the smoothing kernel (size, half_width).
+        colorbar : bool
+            Whether to show the colorbar.
         show : bool
             Whether to show the figure or not.
 
@@ -166,9 +174,9 @@ class _BaseRaw(object):
         fig : instance of matplotlib.figure.Figure
             The resulting figure object
         """
-        plot_heatmap_raw(raw=self, start=start, stop=stop, cmap=cmap,
-                         title=title, kernel=kernel, colorbar=colorbar,
-                         show=show)
+        return plot_heatmap_raw(raw=self, start=start, stop=stop, cmap=cmap,
+                                title=title, vmax=vmax, kernel=kernel,
+                                colorbar=colorbar, show=show)
 
     @property
     def times(self):

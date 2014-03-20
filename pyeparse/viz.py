@@ -83,31 +83,10 @@ def plot_calibration(raw, title='Calibration', show=True):
     return figs
 
 
-def plot_heatmap(xdata, ydata, width, height, cmap=None,
-                 vmin=None, colorbar=True,
-                 kernel=dict(size=20, half_width=10), show=True):
-    """ Plot heatmap of X/Y positions on canvas, e.g., screen
-
-    Parameters
-    ----------
-    xdata : array-like
-        The X position data to be visualized.
-    ydata : array-like
-        The Y position data to be visualized.
-    width : int
-        The canvas width.
-    height : int
-        The canvas height.
-    show : bool
-        Whether to show the figure or not.
-
-    Returns
-    -------
-    fig : instance of matplotlib.figure.Figure
-        The resulting figure object
-    canvas : ndarray (width, height)
-        The canvas including the gaze data.
-    """
+def _plot_heatmap(xdata, ydata, width, height, cmap=None,
+                  vmax=None, colorbar=True,
+                  kernel=dict(size=20, half_width=10), show=True):
+    """ Plot heatmap of X/Y positions on canvas"""
     import matplotlib.pyplot as mpl
     if cmap is None:
         cmap = 'RdBu_r'
@@ -137,12 +116,12 @@ def plot_heatmap(xdata, ydata, width, height, cmap=None,
             canvas[x, y] += 1
 
     fig = mpl.figure()
-    if vmin is None:
+    if vmax is None:
         vmin = canvas.min()
         vmax = canvas.max()
     else:
-        vmax = vmin
-        vmin = -vmin
+        vmax = vmax
+        vmin = -vmax
 
     # flip canvas to match width > height
     canvas = canvas.T
@@ -155,7 +134,7 @@ def plot_heatmap(xdata, ydata, width, height, cmap=None,
 
 
 def plot_heatmap_raw(raw, start=None, stop=None, cmap=None,
-                     title=None, vmin=None,  kernel=dict(size=20, width=10),
+                     title=None, vmax=None,  kernel=dict(size=20, width=10),
                      show=True, colorbar=True):
     """ Plot heatmap of X/Y positions on canvas, e.g., screen
 
@@ -167,8 +146,16 @@ def plot_heatmap_raw(raw, start=None, stop=None, cmap=None,
         Start time in seconds.
     stop : float | None
         End time in seconds.
+    cmap : matplotlib Colormap
+        The colormap to use.
     title : str
         The title to be displayed.
+    vmax : float | None
+        The maximum (and -minimum) value to use for the colormap.
+    kernel : dict
+        Parameters for the smoothing kernel (size, half_width).
+    colorbar : bool
+        Whether to show the colorbar.
     show : bool
         Whether to show the figure or not.
 
@@ -178,9 +165,6 @@ def plot_heatmap_raw(raw, start=None, stop=None, cmap=None,
         The resulting figure object
     """
     import matplotlib.pyplot as mpl
-    if 'screen_coords' not in raw.info:
-        raise RuntimeError('Raw object does not include '
-                           'screen coordinates.')
     width, height = raw.info['screen_coords']
     if isinstance(start, float):
         start = raw.time_as_index([start])[0]
@@ -188,9 +172,9 @@ def plot_heatmap_raw(raw, start=None, stop=None, cmap=None,
         stop = raw.time_as_index([stop])[0]
     data, times = raw[start:stop]
     xdata, ydata = data[:, :2].T
-    fig, _ = plot_heatmap(xdata=xdata, ydata=ydata, width=width,
-                          height=height, cmap=cmap, vmin=vmin,
-                          colorbar=False, show=False)
+    fig, _ = _plot_heatmap(xdata=xdata, ydata=ydata, width=width,
+                           height=height, cmap=cmap, vmax=vmax,
+                           colorbar=False, show=False)
 
     if title is None:
         tstart, tstop = times[start:stop][[0, -1]]
@@ -220,8 +204,8 @@ def figure_nobar(*args, **kwargs):
         keys = list(fig.canvas.callbacks.callbacks['key_press_event'].keys())
         for key in keys:
             fig.canvas.callbacks.disconnect(key)
-    except Exception as ex:
-        raise ex
+    except Exception:
+        raise
     finally:
         mpl.rcParams['toolbar'] = old_val
     return fig
@@ -531,6 +515,5 @@ def plot_epochs(epochs, epoch_idx=None, picks=None, n_chunks=20,
     navigation.canvas.mpl_connect('button_press_event',
                                   partial(_epochs_navigation_onclick,
                                           params=params))
-    if show is True:
-        mpl.show(block=block)
+    mpl.show(block=block) if show else None
     return fig

@@ -23,14 +23,9 @@ def test_raw_plot():
     """Test plotting of raw"""
     for fi, fname in enumerate(fnames):
         raw = Raw(fname)
-        if 'calibrations' in raw.info:
-            raw.plot_calibration()
-        else:
-            assert_raises(RuntimeError, raw.plot_calibration)
-        if 'screen_coords' in raw.info:
-            raw.plot_heatmap(0., 10.)
-        else:
-            assert_raises(RuntimeError, raw.plot_heatmap)
+        raw.plot_calibration()
+        raw.plot_heatmap(0., 10., vmax=1)
+        raw.plot_heatmap(0., 10., kernel=None)
         raw.plot()
 
 
@@ -45,6 +40,7 @@ def test_epochs_plot():
         assert_raises(ValueError, epochs.plot, picks=['whatever'])
         epochs.plot(picks=['ps'])
         fig = epochs.plot(n_chunks=2)
+        epochs.plot(draw_discrete='saccades')
 
     # test clicking: find our callbacks
     for func in fig.canvas.callbacks.callbacks['button_press_event'].items():

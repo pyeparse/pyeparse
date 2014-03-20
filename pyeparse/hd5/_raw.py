@@ -41,8 +41,8 @@ class RawHD5(_BaseRaw):
             data = fid.getNode('/', 'info').read()
             for key in data.dtype.names:
                 info[key] = data[key][0]
-            info['meas_date'] = datetime.strptime(info['meas_date'],
-                                                  '%Y-%m-%dT%H:%M:%S')
+            date = info['meas_date'].decode('ASCII')
+            info['meas_date'] = datetime.strptime(date, '%Y-%m-%dT%H:%M:%S')
             # calibrations
             cg = fid.getNode(fid.root, 'calibrations')
             cals = np.array([fid.getNode(cg, 'c%s' % ii).read()
