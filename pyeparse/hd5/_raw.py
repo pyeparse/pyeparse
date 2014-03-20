@@ -42,6 +42,7 @@ class RawHD5(_BaseRaw):
                                                   '%Y-%m-%dT%H:%M:%S')
             # calibrations
             info['calibrations'] = fid.getNode('/', 'calibrations').read()
+            info['calibrations'] = np.atleast_2d(info['calibrations'])
 
         self._samples = samples
         self._times = times
