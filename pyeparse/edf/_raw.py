@@ -140,6 +140,7 @@ def _extract_calibration(info, messages):
     """Helper to extract calibration from messages"""
     lines = []
     for msg in messages['msg']:
+        msg = msg.decode('ASCII')
         if msg.startswith('!CAL') or msg.startswith('VALIDATE'):
             lines.append(msg)
         if msg.startswith('GAZE_COORDS'):
