@@ -5,9 +5,9 @@
 import numpy as np
 from os import path as op
 import glob
-
-# Store these in one place
-discrete_types = ['saccades', 'fixations', 'blinks']
+import tempfile
+from shutil import rmtree
+import atexit
 
 
 def create_chunks(sequence, size):
@@ -62,3 +62,48 @@ def _get_test_fnames():
     path = op.join(op.dirname(__file__), 'tests', 'data')
     fnames = glob.glob(op.join(path, '*.edf'))
     return fnames
+
+
+class _TempDir(str):
+    """Class for creating and auto-destroying temp dir
+
+    This is designed to be used with testing modules.
+
+    We cannot simply use __del__() method for cleanup here because the rmtree
+    function may be cleaned up before this object, so we use the atexit module
+    instead.
+    """
+    def __new__(self):
+        new = str.__new__(self, tempfile.mkdtemp())
+        return new
+
+    def __init__(self):
+        self._path = self.__str__()
+        atexit.register(self.cleanup)
+
+    def cleanup(self):
+        rmtree(self._path, ignore_errors=True)
+
+
+def _has_joblib():
+    """Helper to determine if joblib is installed"""
+    try:
+        import joblib  # noqa
+    except Exception:
+        return False
+    else:
+        return True
+
+
+def _has_pytables():
+    """Helper to determine if joblib is installed"""
+    try:
+        import tables  # noqa
+    except Exception:
+        return False
+    else:
+        return True
+
+
+_requires_pytables = np.testing.dec.skipif(not _has_pytables(),
+                                           'Requires pytables')

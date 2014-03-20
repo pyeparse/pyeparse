@@ -1,6 +1,8 @@
 """Parallel util function
 """
 
+import multiprocessing
+
 # Modified from mne-python
 
 
@@ -27,21 +29,12 @@ def parallel_func(func, n_jobs):
     """
     # for a single job, we don't need joblib
     if n_jobs == 1:
-        n_jobs = 1
-        my_func = func
-        parallel = list
-        return parallel, my_func, n_jobs
+        return list, func, 1
 
     try:
         from joblib import Parallel, delayed
     except ImportError:
-        try:
-            from sklearn.externals.joblib import Parallel, delayed
-        except ImportError:
-            n_jobs = 1
-            my_func = func
-            parallel = list
-            return parallel, my_func, n_jobs
+        return list, func, 1
 
     n_jobs = check_n_jobs(n_jobs)
     parallel = Parallel(n_jobs, verbose=0)
@@ -68,16 +61,10 @@ def check_n_jobs(n_jobs, allow_cuda=False):
     if not isinstance(n_jobs, int):
         raise ValueError('n_jobs must be an integer')
     elif n_jobs <= 0:
-        try:
-            import multiprocessing
-            n_cores = multiprocessing.cpu_count()
-            n_jobs = min(n_cores + n_jobs + 1, n_cores)
-            if n_jobs <= 0:
-                raise ValueError('If n_jobs has a negative value it must not '
-                                 'be less than the number of CPUs present. '
-                                 'You\'ve got %s CPUs' % n_cores)
-        except ImportError:
-            # only warn if they tried to use something other than 1 job
-            if n_jobs != 1:
-                n_jobs = 1
+        n_cores = multiprocessing.cpu_count()
+        n_jobs = min(n_cores + n_jobs + 1, n_cores)
+        if n_jobs <= 0:
+            raise ValueError('If n_jobs has a negative value it must not '
+                             'be less than the number of CPUs present. '
+                             'You\'ve got %s CPUs' % n_cores)
     return n_jobs

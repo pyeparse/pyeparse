@@ -13,7 +13,7 @@ fnames = _get_test_fnames()
 
 
 def test_raw_io():
-    """Test raw IO functionality"""
+    """Test raw EDF IO functionality"""
     for fi, fname in enumerate(fnames):
         raw = Raw(fname)
         print(raw)  # test repr works

@@ -11,7 +11,7 @@ env:
     - PYTHON=2.6 DEPS=full
     - PYTHON=2.7 DEPS=full  # note: this runs python-pandas (old version)
     - PYTHON=3.3 DEPS=full
-    - PYTHON=3.3 DEPS=minimal  # pandas optional
+    - PYTHON=3.3 DEPS=minimal  # pandas, joblib, pytables optional
     - PYTHON=2.7 DEPS=minimal
 
 before_install:
@@ -38,12 +38,13 @@ install:
     - travis_retry sudo apt-get -qq update
     - travis_retry sudo apt-get -qq install -y --force-yes edfapi-3.1
     - sudo ldconfig
-    # pandas
+    # pandas, joblib, pytables
     - if [ "${DEPS}" == "full" ]; then
         if [ "${PYTHON}" == "2.7" ]; then
-          travis_retry sudo apt-get -qq install python-pandas;
+          travis_retry sudo apt-get -qq install python-pandas python-joblib python-tables;
         else
-          conda install --yes --quiet pandas;
+          conda install --yes --quiet pandas pytables;
+          pip install joblib;
         fi;
       fi;
     - pip install -q coveralls nose-timer flake8
@@ -74,4 +75,3 @@ script:
 after_success:
     # Need to run from source dir to execute appropriate "git" commands
     - coveralls;
-

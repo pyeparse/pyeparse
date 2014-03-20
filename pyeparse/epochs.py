@@ -10,7 +10,7 @@ import warnings
 
 from ._event import Discrete
 from .viz import plot_epochs
-from .utils import discrete_types, pupil_kernel
+from .utils import pupil_kernel
 from ._py23 import string_types
 from .parallel import parallel_func
 
@@ -103,13 +103,13 @@ class Epochs(object):
                 self._data[e1:e2, ii] = _samp[ii]
 
         # deal with discretes
-        for kind in discrete_types:
+        for kind in _discretes[0].keys():
             this_discrete = Discrete()
             for d in _discretes:
                 this_discrete.extend(d[kind])
             assert len(this_discrete) == len(self.events)
             setattr(self, kind, this_discrete)
-        self.info['discretes'] = discrete_types
+        self.info['discretes'] = list(_discretes[0].keys())
 
     def _process_raw_events(self, raw, events, my_event_id, event_keys,
                             idx_offsets):
@@ -119,7 +119,7 @@ class Epochs(object):
         # prevent the evil
         events = events[events[:, 0].argsort()]
         discretes = dict()
-        for kind in raw.info['event_types']:
+        for kind in raw.discrete.keys():
             discretes[kind] = Discrete()
         for ii, (event, this_id) in enumerate(events):
             if this_id not in my_event_id:
@@ -135,24 +135,22 @@ class Epochs(object):
             sample_inds.append(inds)
             keep_idx.append(ii)
 
-            for kind in raw.info['event_types']:
-                this_disc = discretes[kind]
+            for kind in raw.discrete.keys():
                 df = raw.discrete[kind]
+                names = df.dtype.names
                 comp_1 = df['stime']
-                comp_2 = df['etime'] if 'etime' in df else df['stime']
-                idx = np.where((comp_1 >= this_tmin) & (comp_2 <= this_tmax))
-                for ii in idx:
-                    subdict = dict()
-                    for key in df.keys():
-                        subdict[key] = df[key][idx].copy()
-                    subdict['stime'] -= this_time
-                    if 'etime' in subdict:
-                        subdict['etime'] -= this_time
-                    this_disc.append(subdict)
+                comp_2 = df['etime'] if 'etime' in names else df['stime']
+                idx = np.where((comp_1 >= this_tmin)
+                               & (comp_2 <= this_tmax))[0]
+                subarray = df[idx]
+                subarray['stime'] -= this_time
+                if 'etime' in subarray.dtype.names:
+                    subarray['etime'] -= this_time
+                discretes[kind].append(subarray)
         events = events[keep_idx]
         sample_inds = np.array(sample_inds)
         samples = raw[1:, sample_inds][0]
-        for kind in raw.info['event_types']:
+        for kind in raw.discrete.keys():
             assert len(discretes[kind]) == len(events)
         return samples, discretes, events
 

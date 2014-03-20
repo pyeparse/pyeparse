@@ -4,7 +4,7 @@ from numpy.testing import assert_equal, assert_array_equal
 from nose.tools import assert_true, assert_raises
 
 from pyeparse import Raw, Epochs
-from pyeparse.utils import _get_test_fnames
+from pyeparse.utils import _get_test_fnames, _has_joblib
 
 warnings.simplefilter('always')  # in case we hit warnings
 
@@ -18,19 +18,27 @@ def _filter_warnings(w):
 def test_epochs_deconv():
     """Test epochs deconvolution"""
     tmin, tmax = -0.5, 1.5
-    event_dict = dict(foo=999, bar=77)
-    events_a = np.array([[12000, 77], [1000, 999]])
-    for fname in fnames:
+    event_dict = dict(foo=999)
+    events = np.array([np.arange(0, 21000, 1000, int),
+                       999 * np.ones(21, int)]).T
+    for fi, fname in enumerate(fnames):
+        if fi == 0:
+            n_jobs = 1
+        else:
+            n_jobs = 0
         raw = Raw(fname)
-        epochs = Epochs([raw] * 2, [events_a] * 2, event_dict,
+        epochs = Epochs(raw, events, event_dict,
                         tmin, tmax)
-        assert_raises(RuntimeError, Epochs, raw, events_a, 'test', tmin, tmax)
+        assert_raises(RuntimeError, Epochs, raw, events, 'test', tmin, tmax)
         fit, times = epochs.deconvolve()
         assert_equal(fit.shape, (len(epochs), len(times)))
         fit, times = epochs.deconvolve(spacing=[-0.1, 0.4, 1.0],
-                                       bounds=(0, np.inf))
+                                       bounds=(0, np.inf), n_jobs=n_jobs)
         assert_equal(fit.shape, (len(epochs), len(times)))
         assert_equal(len(times), 3)
+        if fi == 0:
+            if _has_joblib():
+                assert_raises(ValueError, epochs.deconvolve, n_jobs=-1000)
 
 
 def test_epochs_combine():
@@ -65,10 +73,11 @@ def test_epochs_concat():
     """Test epochs concatenation"""
     tmin, tmax = -0.5, 1.5
     event_dict = dict(foo=999, bar=77)
-    events_a = np.array([[12000, 77], [1000, 999]])
+    events_a = np.array([[12000, 77], [1000, 999], [-1, 999]])
     events_b = np.array([[1000, 999], [10000, 999]])
     for fname in fnames:
         raw = Raw(fname)
+        events_a[-1, 0] = raw.n_samples - 1
         epochs_ab = Epochs([raw] * 2, [events_a, events_b], event_dict,
                            tmin, tmax)
         epochs_ba = Epochs([raw] * 2, [events_b, events_a], event_dict,

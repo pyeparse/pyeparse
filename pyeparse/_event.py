@@ -36,17 +36,14 @@ def find_events(raw, pattern, event_id):
     idx : instance of numpy.ndarray (times, event_id)
         The indices found.
     """
-    df = raw.discrete.get('messages', None)
-    if df is not None:
-        if callable(pattern):
-            func = pattern
-        elif isinstance(pattern, string_types):
-            func = lambda x: pattern in x
-        else:
-            raise ValueError('Pattern not valid. Pass string or function')
-        idx = np.array([func(msg) for msg in df['msg']])
-        out = raw.time_as_index(df['time'][idx])
-        id_vector = np.repeat(event_id, len(out)).astype(np.int64)
-        return np.c_[out, id_vector]
+    df = raw.discrete['messages']
+    if callable(pattern):
+        func = pattern
+    elif isinstance(pattern, string_types):
+        func = lambda x: pattern in x
     else:
-        return np.zeros((0, 2), dtype=np.int64)
+        raise ValueError('Pattern not valid. Pass string or function')
+    idx = np.array([func(msg.decode('ASCII')) for msg in df['msg']])
+    out = raw.time_as_index(df['stime'][idx])
+    id_vector = np.repeat(event_id, len(out)).astype(np.int64)
+    return np.c_[out, id_vector]

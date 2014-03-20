@@ -6,7 +6,7 @@ from os import path as op
 import ctypes as ct
 from datetime import datetime
 from functools import partial
-
+import warnings
 
 from ._edf2py import (edf_open_file, edf_close_file, edf_get_next_data,
                       edf_get_preamble_text_length,
@@ -15,6 +15,8 @@ from ._edf2py import (edf_open_file, edf_close_file, edf_get_next_data,
 from .._baseraw import _BaseRaw
 from ._defines import event_constants
 from . import _defines as defines
+
+_MAX_MSG_LEN = 260  # maxmimum message length we'll need to store
 
 
 class RawEDF(_BaseRaw):
@@ -56,7 +58,8 @@ class _edf_open(object):
 
 
 _ets2pp = dict(SAMPLE_TYPE='sample', ENDFIX='fixations', ENDSACC='saccades',
-               ENDBLINK='blinks', BUTTONEVENT='buttons', INPUTEVENT='inputs')
+               ENDBLINK='blinks', BUTTONEVENT='buttons', INPUTEVENT='inputs',
+               MESSAGEEVENT='messages')
 
 
 def _read_raw_edf(fname):
@@ -87,11 +90,12 @@ def _read_raw_edf(fname):
     #
     with _edf_open(fname) as edf:
         info = _parse_preamble(edf)
-        info['discrete_fields'] = dict()
         etype = None
         res = dict(info=info, samples=None, n_samps=n_samps, offsets=offsets,
-                   messages=dict(time=[], msg=[]), edf_fields=dict())
-        res['samples'] = np.empty((4, 1000), np.float64)
+                   edf_fields=dict(messages=['stime', 'msg']), discrete=dict())
+        dtype = [('stime', np.float64), ('msg', '|S%s' % _MAX_MSG_LEN)]
+        res['discrete']['messages'] = np.empty((n_samps['messages']),
+                                               dtype=dtype)
         while etype != event_constants.get('NO_PENDING_ITEMS'):
             etype = edf_get_next_data(edf)
             if etype not in event_constants:
@@ -102,32 +106,23 @@ def _read_raw_edf(fname):
     #
     # Put info and discrete into correct output format
     #
-    discrete = dict()
+    discrete = res['discrete']
     info = res['info']
-    info['event_types'] = ('saccades', 'fixations', 'blinks',
-                           'buttons', 'inputs')
+    event_types = ('saccades', 'fixations', 'blinks', 'buttons', 'inputs',
+                   'messages')
     info['sample_fields'] = info['sample_fields'][1:]  # omit time
-    for key in info['event_types']:
-        src = res[key]
-        discrete[key] = dict()
-        for ii, sub_key in enumerate(info['discrete_fields'][key]):
-            discrete[key][sub_key] = src[ii]
-    discrete['messages'] = res['messages']
-    discrete['messages']['time'] = np.array(discrete['messages']['time'],
-                                            np.float64)
 
     #
     # fix sample times
     #
-    # XXX This will need to be fixed for files with multiple starts/stops...
     data = res['samples'][1:]
     data[data >= 100000000.0 - 1] = np.nan
     orig_times = res['samples'][0]  # original times
     assert np.array_equal(orig_times, np.sort(orig_times))
     times = np.arange(len(orig_times), dtype=np.float64) / info['sfreq']
-    for key in list(info['event_types']) + ['messages']:
-        for sub_key in ('stime', 'etime', 'time'):
-            if sub_key in discrete[key]:
+    for key in event_types:
+        for sub_key in ('stime', 'etime'):
+            if sub_key in discrete[key].dtype.names:
                 _adjust_time(discrete[key][sub_key], orig_times, times)
 
     _extract_calibration(info, discrete['messages'])
@@ -145,15 +140,16 @@ def _extract_calibration(info, messages):
     """Helper to extract calibration from messages"""
     lines = []
     for msg in messages['msg']:
+        msg = msg.decode('ASCII')
         if msg.startswith('!CAL') or msg.startswith('VALIDATE'):
             lines.append(msg)
         if msg.startswith('GAZE_COORDS'):
             coords = msg.split()[-4:]
             coords = [int(round(float(c))) for c in coords]
-            info['screen_coords'] = [coords[2] - coords[0] + 1,
-                                     coords[3] - coords[1] + 1]
+            info['screen_coords'] = np.array([coords[2] - coords[0] + 1,
+                                              coords[3] - coords[1] + 1], int)
     calibrations = list()
-    keys = ['point-x', 'point-y', 'offset', 'diff-x', 'diff-y']
+    keys = ['point_x', 'point_y', 'offset', 'diff_x', 'diff_y']
     li = 0
     while(li < len(lines)):
         line = lines[li]
@@ -169,14 +165,14 @@ def _extract_calibration(info, messages):
                                            xy_diff[0], xy_diff[1]]]
                 this_validation.append(vals)
             li += n_points
-            this_validation = np.array(this_validation).T
-            out = dict()
-            assert len(keys) == len(this_validation)
-            for key, val in zip(keys, this_validation):
-                out[key] = val
+            this_validation = np.array(this_validation)
+            dtype = [(key, 'f8') for key in keys]
+            out = np.empty(len(this_validation), dtype=dtype)
+            for key, data in zip(keys, this_validation.T):
+                out[key] = data
             calibrations.append(out)
         li += 1
-    info['calibrations'] = calibrations
+    info['calibrations'] = np.array(calibrations)
 
 
 def _extract_sys_info(line):
@@ -330,13 +326,19 @@ def _handle_message(edf, res):
     """MESSAGEEVENT"""
     e = edf_get_event_data(edf).contents
     msg = ct.string_at(ct.byref(e.message[0]), e.message.contents.len + 1)[2:]
-    res['messages']['time'].append(e.sttime)
-    res['messages']['msg'].append(msg.decode('ASCII'))
+    msg = msg.decode('ASCII')
+    if len(msg) > _MAX_MSG_LEN:
+        warnings.warn('Message truncated to %s characters:\n%s'
+                      % (_MAX_MSG_LEN, msg))
+    off = res['offsets']['messages']
+    res['discrete']['messages']['stime'][off] = e.sttime
+    res['discrete']['messages']['msg'][off] = msg[:_MAX_MSG_LEN]
+    res['offsets']['messages'] += 1
 
 
 def _handle_end(edf, res, name):
     """ENDSACC, ENDFIX, ENDBLINK, BUTTONS, INPUT"""
-    if name not in res['info']['discrete_fields']:
+    if name not in res['discrete']:
         # XXX This should be changed to support given fields
         if name == 'saccades':
             f = ['eye', 'sttime', 'entime',
@@ -352,12 +354,14 @@ def _handle_end(edf, res, name):
         else:
             raise KeyError('Unknown name %s' % name)
         res['edf_fields'][name] = f
-        res['info']['discrete_fields'][name] = [_el2pp[field] for field in f]
-        res[name] = np.empty((len(f), res['n_samps'][name]), np.float64)
+        our_names = [_el2pp[field] for field in f]
+        dtype = [(ff, np.float64) for ff in our_names]
+        res['discrete'][name] = np.empty(res['n_samps'][name], dtype=dtype)
     e = edf_get_event_data(edf).contents
     vals = _to_list(e, res['edf_fields'][name], res['eye_idx'])
     off = res['offsets'][name]
-    res[name][:, off] = vals
+    for ff, vv in zip(res['discrete'][name].dtype.names, vals):
+        res['discrete'][name][ff][off] = vv
     res['offsets'][name] += 1
 
 

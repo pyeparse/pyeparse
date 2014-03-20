@@ -3,6 +3,8 @@
 # License: BSD (3-clause)
 
 import numpy as np
+from os import path as op
+from copy import deepcopy
 
 from ._event import find_events
 from ._py23 import string_types
@@ -13,7 +15,7 @@ class _BaseRaw(object):
     """Base class for Raw"""
     def __init__(self):
         assert self._samples.shape[0] == len(self.info['sample_fields'])
-        assert self.times[0] == 0
+        assert self.times[0] == 0.0
         assert isinstance(self.info['sfreq'], float)
         dt = np.abs(np.diff(self.times) - (1. / self.info['sfreq']))
         assert np.all(dt < 1e-6)
@@ -47,8 +49,61 @@ class _BaseRaw(object):
                            % (key, self.info['sample_fields']))
         return self.info['sample_fields'].index(key)
 
+    def save(self, fname, overwrite=False):
+        """Save data to HD5 format
+
+        Parameters
+        ----------
+        fname : str
+            Filename to use.
+        overwrite : bool
+            If True, overwrite file (if it exists).
+        """
+        if op.isfile(fname) and not overwrite:
+            raise IOError('file "%s" exists, use overwrite=True to overwrite'
+                          % fname)
+        try:
+            import tables
+        except Exception:
+            raise ImportError('pytables could not be imported')
+        with tables.openFile(fname, mode='w') as fid:
+            # samples
+            filters = tables.Filters(complib='zlib', complevel=5)
+            s = np.core.records.fromarrays(self._samples)
+            s.dtype.names = self.info['sample_fields']
+            fid.createTable(fid.root, 'samples', s)
+            # times
+            atom = tables.Atom.from_dtype(self._times.dtype)
+            s = fid.createCArray(fid.root, 'times', atom,
+                                 self._times.shape, filters=filters)
+            s[:] = self._times
+            # discrete
+            dg = fid.createGroup(fid.root, 'discrete')
+            for key, val in self.discrete.items():
+                fid.createTable(dg, key, val, filters=filters)
+            # info (harder)
+            info = deepcopy(self.info)
+            info['meas_date'] = info['meas_date'].isoformat()
+            items = [('eye', '|S256'),
+                     ('camera', '|S256'),
+                     ('camera_config', '|S256'),
+                     ('meas_date', '|S32'),
+                     ('ps_units', '|S16'),
+                     ('screen_coords', 'f8', self.info['screen_coords'].shape),
+                     ('serial', '|S256'),
+                     ('sfreq', 'f8'),
+                     ('version', '|S256'),
+                     ]
+            data = np.array([tuple([info[t[0]] for t in items])], dtype=items)
+            fid.createTable(fid.root, 'info', data, filters=filters)
+            # calibrations
+            cg = fid.createGroup('/', 'calibrations')
+            for ci, cal in enumerate(self.info['calibrations']):
+                fid.createTable(cg, 'c%s' % ci, cal)
+
     @property
     def n_samples(self):
+        """Number of time samples"""
         return len(self.times)
 
     def __len__(self):
@@ -90,9 +145,9 @@ class _BaseRaw(object):
         """
         return plot_raw(raw=self, events=events, title=title, show=show)
 
-    def plot_heatmap(self, start=None, stop=None, cmap=None,
-                     title=None, kernel=dict(size=100, half_width=50),
-                     colorbar=None, show=True):
+    def plot_heatmap(self, start=None, stop=None, cmap=None, title=None,
+                     vmax=None, kernel=dict(size=100, half_width=50),
+                     colorbar=True, show=True):
         """ Plot heatmap of X/Y positions on canvas, e.g., screen
 
         Parameters
@@ -101,8 +156,16 @@ class _BaseRaw(object):
             Start time in seconds.
         stop : float | None
             End time in seconds.
+        cmap : matplotlib Colormap
+            The colormap to use.
         title : str
             The title to be displayed.
+        vmax : float | None
+            The maximum (and -minimum) value to use for the colormap.
+        kernel : dict
+            Parameters for the smoothing kernel (size, half_width).
+        colorbar : bool
+            Whether to show the colorbar.
         show : bool
             Whether to show the figure or not.
 
@@ -111,12 +174,13 @@ class _BaseRaw(object):
         fig : instance of matplotlib.figure.Figure
             The resulting figure object
         """
-        plot_heatmap_raw(raw=self, start=start, stop=stop, cmap=cmap,
-                         title=title, kernel=kernel, colorbar=colorbar,
-                         show=show)
+        return plot_heatmap_raw(raw=self, start=start, stop=stop, cmap=cmap,
+                                title=title, vmax=vmax, kernel=kernel,
+                                colorbar=colorbar, show=show)
 
     @property
     def times(self):
+        """Time values"""
         return self._times
 
     def time_as_index(self, times):
