@@ -204,7 +204,7 @@ class Epochs(object):
         if kind not in self.info['data_cols']:
             raise ValueError('kind "%s" must be one of %s'
                              % (kind, self.info['data_cols']))
-        return self._data[:, self.info['data_cols'].index(kind)]
+        return self._data[:, self.info['data_cols'].index(kind)].copy()
 
     @property
     def data_frame(self):

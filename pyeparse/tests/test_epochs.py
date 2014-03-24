@@ -29,8 +29,10 @@ def test_epochs_deconv():
         raw = Raw(fname)
         epochs = Epochs(raw, events, event_dict,
                         tmin, tmax)
+        data = epochs.get_data('ps')
         assert_raises(RuntimeError, Epochs, raw, events, 'test', tmin, tmax)
         fit, times = epochs.deconvolve()
+        assert_array_equal(data, epochs.get_data('ps'))
         assert_equal(fit.shape, (len(epochs), len(times)))
         fit, times = epochs.deconvolve(spacing=[-0.1, 0.4, 1.0],
                                        bounds=(0, np.inf), n_jobs=n_jobs)
