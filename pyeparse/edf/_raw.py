@@ -96,6 +96,7 @@ def _read_raw_edf(fname):
         dtype = [('stime', np.float64), ('msg', '|S%s' % _MAX_MSG_LEN)]
         res['discrete']['messages'] = np.empty((n_samps['messages']),
                                                dtype=dtype)
+        res['eye_idx'] = None  # in case we get input/button before START
         while etype != event_constants.get('NO_PENDING_ITEMS'):
             etype = edf_get_next_data(edf)
             if etype not in event_constants:
