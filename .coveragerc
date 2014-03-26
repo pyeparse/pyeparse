@@ -4,4 +4,4 @@ source = pyeparse
 #include = *pyeparse/*
 omit =
     *setup.py
-    *pyeparse/_py23.py
+    *pyeparse/_fixes.py

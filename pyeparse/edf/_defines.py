@@ -29,7 +29,7 @@ def create_constants(var_val_dict):
     return constants
 
 
-#************* EVENT TYPE CODES ***********
+# ************* EVENT TYPE CODES ***********
 event_constants = create_constants(dict(
     SAMPLE_TYPE=200,
     # buffer = IEVENT, FEVENT, btype = IEVENT_BUFFER
@@ -59,7 +59,7 @@ event_constants = create_constants(dict(
     LOST_DATA_EVENT=0x3F,  # NEW: Event flags gap in data stream
     NO_PENDING_ITEMS=0,
     RECORDING_INFO=30,
-    ))
+))
 
 # Missing data constants
 MISSING_DATA = -32768  # data is missing (integer)
@@ -67,29 +67,29 @@ MISSING = -32768
 INaN = -32768
 
 eye_constants = create_constants(dict(
-    #	#binocular data needs to ID the eye for events
-    #	#samples need to index the data
-    #	#These constants are used as eye identifiers
+    #	binocular data needs to ID the eye for events
+    #	samples need to index the data
+    #	These constants are used as eye identifiers
     LEFT_EYE=0,  # index and ID of eyes
     RIGHT_EYE=1,
     BINOCULAR=2,  # data for both eyes available
-    ))
+))
 
 
 pupil_constants = create_constants(dict(PUPIL_AREA=0, PUPIL_DIAMETER=1))
 
-##******** EYE SAMPLE DATA FORMATS ******
+# ******** EYE SAMPLE DATA FORMATS ******
 #
-#	#The SAMPLE struct contains data from one 4-msec
-#	#eye-tracker sample. The <flags> field has a bit for each
-#	#type of data in the sample. Fields not read have 0 flag
-#	#bits, and are set to MISSING_DATA
+#	The SAMPLE struct contains data from one 4-msec
+#	eye-tracker sample. The <flags> field has a bit for each
+#	type of data in the sample. Fields not read have 0 flag
+#	bits, and are set to MISSING_DATA
 #
-##flags to define what data is included in each sample.
-##There is one bit for each type.  Total data for samples
-##in a block is indicated by these bits in the <sam_data>
-##field of ILINKDATA or EDF_FILE, and is updated by the
-##STARTSAMPLES control event.
+# flags to define what data is included in each sample.
+# There is one bit for each type.  Total data for samples
+# in a block is indicated by these bits in the <sam_data>
+# field of ILINKDATA or EDF_FILE, and is updated by the
+# STARTSAMPLES control event.
 
 SAMPLE_LEFT = 0x8000  # data for these eye(s)
 SAMPLE_RIGHT = 0x4000
@@ -108,7 +108,7 @@ SAMPLE_UTAGGED = 0x0004  # user-defineabe variable-length tagged
 SAMPLE_ADD_OFFSET = 0x0002  # if this flag is set for the sample add .5ms to
 # the sample time
 
-#************ CONSTANTS FOR EVENTS ***********
+# ************ CONSTANTS FOR EVENTS ***********
 # "read" flag contents in IEVENT
 # time data
 READ_ENDTIME = 0x0040  # end time (start time always read)
@@ -161,7 +161,7 @@ PARSEDBY_GAZE = 0x00C0  # how events were generated
 PARSEDBY_HREF = 0x0080
 PARSEDBY_PUPIL = 0x0040
 
-#*********** STATUS FLAGS (samples and events) ***************
+# *********** STATUS FLAGS (samples and events) ***************
 LED_TOP_WARNING = 0x0080  # marker is in border of image
 LED_BOT_WARNING = 0x0040
 LED_LEFT_WARNING = 0x0020
@@ -176,12 +176,12 @@ MATH_ERROR_WARNING = 0x2000  # math error in proc. sample
 # THESE CODES ONLY VALID FOR EYELINK II
 
 # this sample interpolated to preserve sample rate
-#usually because speed dropped due to missing pupil
-#INTERP_SAMPLE_WARNING 0x1000
+# usually because speed dropped due to missing pupil
+# INTERP_SAMPLE_WARNING 0x1000
 
 # pupil interpolated this sample
-#usually means pupil loss or
-#500 Hz sample with CR but no pupil
+# usually means pupil loss or
+# 500 Hz sample with CR but no pupil
 #
 INTERP_PUPIL_WARNING = 0x8000
 
@@ -203,7 +203,7 @@ CR_RECOV_RIGHT_WARNING = 0x0800
 TFLAG_MISSING = 0x4000  # missing
 TFLAG_ANGLE = 0x2000  # extreme target angle
 TFLAG_NEAREYE = 0x1000  # target near eye so windows overlapping
-#  DISTANCE WARNINGS (limits set by remote_distance_warn_range command)
+# DISTANCE WARNINGS (limits set by remote_distance_warn_range command)
 TFLAG_CLOSE = 0x0800  # distance vs. limits
 TFLAG_FAR = 0x0400
 # TARGET TO CAMERA EDGE  (margin set by remote_edge_warn_pixels command)

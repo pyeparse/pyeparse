@@ -11,7 +11,7 @@ import warnings
 from ._event import Discrete
 from .viz import plot_epochs
 from .utils import pupil_kernel
-from ._py23 import string_types
+from ._fixes import string_types, nanmean, nanstd
 from .parallel import parallel_func
 
 
@@ -467,8 +467,8 @@ class Epochs(object):
             baseline[1] = self.times[-1]
         baseline = self.time_as_index(baseline)
         zs = self.get_data('ps')
-        std = np.nanstd(zs.flat)
-        bl = np.nanmean(zs[:, baseline[0]:baseline[1] + 1], axis=1)
+        std = nanstd(zs.flat)
+        bl = nanmean(zs[:, baseline[0]:baseline[1] + 1], axis=1)
         zs -= bl[:, np.newaxis]
         zs /= std
         return zs
@@ -585,7 +585,7 @@ def _get_drop_indices(event_times, method):
     """Helper to get indices to drop from multiple event timing lists"""
     small_idx = np.argmin([e.shape[0] for e in event_times])
     small_e_times = event_times[small_idx]
-    if not method in ['mintime', 'truncate']:
+    if method not in ['mintime', 'truncate']:
         raise ValueError('method must be either mintime or truncate, not '
                          '%s' % method)
     indices = list()
