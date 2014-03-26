@@ -154,7 +154,7 @@ def _extract_calibration(info, messages):
     li = 0
     while(li < len(lines)):
         line = lines[li]
-        if '!CAL VALIDATION ' in line and not 'ABORTED' in line:
+        if '!CAL VALIDATION ' in line and 'ABORTED' not in line:
             cal_kind = line.split('!CAL VALIDATION ')[1].split()[0]
             n_points = int([c for c in cal_kind if c.isdigit()][0])
             this_validation = []
@@ -283,7 +283,7 @@ for key, val in _pp2el.items():
 
 
 #
-## EDF File Handlers
+# EDF File Handlers
 #
 
 def _handle_recording_info(edf, res):
@@ -378,7 +378,7 @@ def _handle_fixation_update(edf, res):
 
 # element_handlers maps the various EDF file element types to the
 # element handler function that should be called.
-#
+
 _element_handlers = dict(RECORDING_INFO=_handle_recording_info,
                          SAMPLE_TYPE=_handle_sample,
                          MESSAGEEVENT=_handle_message,

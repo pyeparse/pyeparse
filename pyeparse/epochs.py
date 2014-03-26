@@ -585,7 +585,7 @@ def _get_drop_indices(event_times, method):
     """Helper to get indices to drop from multiple event timing lists"""
     small_idx = np.argmin([e.shape[0] for e in event_times])
     small_e_times = event_times[small_idx]
-    if not method in ['mintime', 'truncate']:
+    if method not in ['mintime', 'truncate']:
         raise ValueError('method must be either mintime or truncate, not '
                          '%s' % method)
     indices = list()
