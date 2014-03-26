@@ -11,7 +11,7 @@ import warnings
 from ._event import Discrete
 from .viz import plot_epochs
 from .utils import pupil_kernel
-from ._py23 import string_types
+from ._fixes import string_types, nanmean, nanstd
 from .parallel import parallel_func
 
 
@@ -467,8 +467,8 @@ class Epochs(object):
             baseline[1] = self.times[-1]
         baseline = self.time_as_index(baseline)
         zs = self.get_data('ps')
-        std = np.nanstd(zs.flat)
-        bl = np.nanmean(zs[:, baseline[0]:baseline[1] + 1], axis=1)
+        std = nanstd(zs.flat)
+        bl = nanmean(zs[:, baseline[0]:baseline[1] + 1], axis=1)
         zs -= bl[:, np.newaxis]
         zs /= std
         return zs

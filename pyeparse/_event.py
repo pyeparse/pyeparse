@@ -3,7 +3,7 @@
 # License: BSD (3-clause)
 
 import numpy as np
-from ._py23 import string_types
+from ._fixes import string_types
 
 
 class Discrete(list):

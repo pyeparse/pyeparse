@@ -7,7 +7,7 @@ import math
 from collections import deque
 from functools import partial
 from .utils import create_chunks, fwhm_kernel_2d
-from ._py23 import string_types
+from ._fixes import string_types
 
 
 def plot_raw(raw, events=None, title='Raw', show=True):

@@ -7,7 +7,7 @@ from os import path as op
 from copy import deepcopy
 
 from ._event import find_events
-from ._py23 import string_types
+from ._fixes import string_types
 from .viz import plot_calibration, plot_heatmap_raw, plot_raw
 
 
