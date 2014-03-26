@@ -63,24 +63,33 @@ class _BaseRaw(object):
             raise IOError('file "%s" exists, use overwrite=True to overwrite'
                           % fname)
         try:
-            import tables
+            import tables as tb
         except Exception:
             raise ImportError('pytables could not be imported')
-        with tables.openFile(fname, mode='w') as fid:
+        o_f = tb.open_file if hasattr(tb, 'open_file') else tb.openFile
+        with o_f(fname, mode='w') as fid:
+            if hasattr(fid, 'create_group'):
+                c_g = fid.create_group
+                c_t = fid.create_table
+                c_c_a = fid.create_carray
+            else:
+                c_g = fid.createGroup
+                c_t = fid.createTable
+                c_c_a = fid.createCArray
             # samples
-            filters = tables.Filters(complib='zlib', complevel=5)
+            filters = tb.Filters(complib='zlib', complevel=5)
             s = np.core.records.fromarrays(self._samples)
             s.dtype.names = self.info['sample_fields']
-            fid.createTable(fid.root, 'samples', s)
+            c_t(fid.root, 'samples', s)
             # times
-            atom = tables.Atom.from_dtype(self._times.dtype)
-            s = fid.createCArray(fid.root, 'times', atom,
-                                 self._times.shape, filters=filters)
+            atom = tb.Atom.from_dtype(self._times.dtype)
+            s = c_c_a(fid.root, 'times', atom,
+                      self._times.shape, filters=filters)
             s[:] = self._times
             # discrete
-            dg = fid.createGroup(fid.root, 'discrete')
+            dg = c_g(fid.root, 'discrete')
             for key, val in self.discrete.items():
-                fid.createTable(dg, key, val, filters=filters)
+                c_t(dg, key, val, filters=filters)
             # info (harder)
             info = deepcopy(self.info)
             info['meas_date'] = info['meas_date'].isoformat()
@@ -95,11 +104,11 @@ class _BaseRaw(object):
                      ('version', '|S256'),
                      ]
             data = np.array([tuple([info[t[0]] for t in items])], dtype=items)
-            fid.createTable(fid.root, 'info', data, filters=filters)
+            c_t(fid.root, 'info', data, filters=filters)
             # calibrations
-            cg = fid.createGroup('/', 'calibrations')
+            cg = c_g('/', 'calibrations')
             for ci, cal in enumerate(self.info['calibrations']):
-                fid.createTable(cg, 'c%s' % ci, cal)
+                c_t(cg, 'c%s' % ci, cal)
 
     @property
     def n_samples(self):
