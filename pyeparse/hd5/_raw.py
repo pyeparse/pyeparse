@@ -27,25 +27,25 @@ class RawHD5(_BaseRaw):
         info = dict()
         with tables.openFile(fname) as fid:
             # samples
-            samples = fid.getNode('/', 'samples').read()
+            samples = fid.get_node('/', 'samples').read()
             info['sample_fields'] = list(deepcopy(samples.dtype.names))
             samples = samples.view(np.float64).reshape(samples.shape[0], -1).T
             # times
-            times = fid.getNode('/', 'times').read()
+            times = fid.get_node('/', 'times').read()
             # discrete
             discrete = dict()
             dg = fid.getNode('/', 'discrete')
             for key in dg.__members__:
                 discrete[key] = getattr(dg, key).read()
             # info
-            data = fid.getNode('/', 'info').read()
+            data = fid.get_node('/', 'info').read()
             for key in data.dtype.names:
                 info[key] = data[key][0]
             date = info['meas_date'].decode('ASCII')
             info['meas_date'] = datetime.strptime(date, '%Y-%m-%dT%H:%M:%S')
             # calibrations
             cg = fid.getNode(fid.root, 'calibrations')
-            cals = np.array([fid.getNode(cg, 'c%s' % ii).read()
+            cals = np.array([fid.get_node(cg, 'c%s' % ii).read()
                              for ii in range(len(cg.__members__))])
             info['calibrations'] = cals
 
