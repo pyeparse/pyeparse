@@ -59,7 +59,7 @@ event_constants = create_constants(dict(
     LOST_DATA_EVENT=0x3F,  # NEW: Event flags gap in data stream
     NO_PENDING_ITEMS=0,
     RECORDING_INFO=30,
-    ))
+))
 
 # Missing data constants
 MISSING_DATA = -32768  # data is missing (integer)
@@ -73,7 +73,7 @@ eye_constants = create_constants(dict(
     LEFT_EYE=0,  # index and ID of eyes
     RIGHT_EYE=1,
     BINOCULAR=2,  # data for both eyes available
-    ))
+))
 
 
 pupil_constants = create_constants(dict(PUPIL_AREA=0, PUPIL_DIAMETER=1))
