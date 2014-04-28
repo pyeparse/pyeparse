@@ -10,16 +10,15 @@ import warnings
 
 try:
     from ._edf2py import (edf_open_file, edf_close_file, edf_get_next_data,
-                          edf_get_preamble_text_length,
-                          edf_get_preamble_text, edf_get_recording_data,
-                          edf_get_sample_data, edf_get_event_data)
+                          edf_get_preamble_text, edf_get_preamble_text_length,
+                          edf_get_recording_data, edf_get_sample_data,
+                          edf_get_event_data)
     has_edfapi = True
     why_not = None
 except OSError as exp:
-    edf_open_file, edf_close_file, edf_get_next_data,
-    edf_get_preamble_text_length, edf_get_preamble_text,
-    edf_get_recording_data, edf_get_sample_data, edf_get_event_data = \
-        [None] * 8
+    (edf_open_file, edf_close_file, edf_get_next_data, edf_get_preamble_text,
+     edf_get_preamble_text_length, edf_get_recording_data, edf_get_sample_data,
+     edf_get_event_data) = [None] * 8
     has_edfapi = False
     why_not = str(exp)
 
