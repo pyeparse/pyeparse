@@ -6,12 +6,14 @@ from numpy.testing import assert_equal, assert_array_equal
 
 from pyeparse import Raw
 from pyeparse._event import Discrete
+from pyeparse.utils import _requires_edfapi
 
 warnings.simplefilter('always')  # in case we hit warnings
 
 fname = op.join(op.dirname(__file__), 'data', 'test_2_raw.edf')
 
 
+@_requires_edfapi
 def test_find_custom_events():
     """Test finding user-defined events"""
     raw = Raw(fname)

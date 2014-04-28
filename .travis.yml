@@ -12,7 +12,7 @@ env:
     - PYTHON=2.7 DEPS=full  # note: this runs python-pandas (old version)
     - PYTHON=3.3 DEPS=full
     - PYTHON=3.3 DEPS=minimal  # pandas, joblib, pytables optional
-    - PYTHON=2.7 DEPS=minimal
+    - PYTHON=2.7 DEPS=minimal  # not even edfapi
 
 before_install:
     - if [ "${PYTHON}" != "2.7" ]; then
@@ -32,12 +32,14 @@ install:
         source activate testenv;
         conda install --yes --quiet scipy nose matplotlib;
       fi;
-    # edf2asc
-    - echo "deb http://archive.canonical.com/ lucid partner" | sudo tee -a /etc/apt/sources.list
-    - echo "deb http://download.sr-support.com/x64 /" | sudo tee -a /etc/apt/sources.list
-    - travis_retry sudo apt-get -qq update
-    - travis_retry sudo apt-get -qq install -y --force-yes edfapi-3.1
-    - sudo ldconfig
+    # edfapi
+    - if [[ "${PYTHON}" != "2.7" || "${DEPS}" == "full" ]]; then
+        echo "deb http://archive.canonical.com/ lucid partner" | sudo tee -a /etc/apt/sources.list;
+        echo "deb http://download.sr-support.com/x64 /" | sudo tee -a /etc/apt/sources.list;
+        travis_retry sudo apt-get -qq update;
+        travis_retry sudo apt-get -qq install -y --force-yes edfapi-3.1;
+        sudo ldconfig;
+      fi;
     # pandas, joblib, pytables
     - if [ "${DEPS}" == "full" ]; then
         if [ "${PYTHON}" == "2.7" ]; then
@@ -50,28 +52,11 @@ install:
     - pip install -q coveralls nose-timer flake8
     - python setup.py build
     - python setup.py install
-    - SRC_DIR=$(pwd)
-    - cd ~
-    # We will run tests from vispy dir to test our install worked
-    - PLP_DIR=$(python -c 'import pyeparse;print(pyeparse.__path__[0])')
-    # Link coverage to src dir, coveralls should be run from there (needs git calls)
-    - ln -s ${PLP_DIR}/../.coverage ${SRC_DIR}/.coverage
-    - ln -s ${SRC_DIR}/pyeparse/tests/data ${PLP_DIR}/tests/data
-    - ln -s ${SRC_DIR}/.coveragerc ${PLP_DIR}/../.coveragerc
-    - ln -s ${SRC_DIR}/setup.cfg ${PLP_DIR}/../setup.cfg
 
 script:
-    - cd ${PLP_DIR}/../
-    - # Nose-timer has bugs on 3+ as of Jan 2014
-    - if [ "${PYTHON}" == "2.7" ]; then
-        nosetests --with-timer --timer-top-n 10;
-      else
-        nosetests;
-      fi
-    # Require strict adherence to PEP8 and pyflakes (can use "# noqa" to skip)
-    - cd ${SRC_DIR}
-    - make flake;
+    - nosetests --with-timer --timer-top-n 10
+    - make flake
 
 after_success:
     # Need to run from source dir to execute appropriate "git" commands
-    - coveralls;
+    - coveralls
