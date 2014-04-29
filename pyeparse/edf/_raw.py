@@ -8,10 +8,20 @@ from datetime import datetime
 from functools import partial
 import warnings
 
-from ._edf2py import (edf_open_file, edf_close_file, edf_get_next_data,
-                      edf_get_preamble_text_length,
-                      edf_get_preamble_text, edf_get_recording_data,
-                      edf_get_sample_data, edf_get_event_data)
+try:
+    from ._edf2py import (edf_open_file, edf_close_file, edf_get_next_data,
+                          edf_get_preamble_text, edf_get_preamble_text_length,
+                          edf_get_recording_data, edf_get_sample_data,
+                          edf_get_event_data)
+    has_edfapi = True
+    why_not = None
+except OSError as exp:
+    (edf_open_file, edf_close_file, edf_get_next_data, edf_get_preamble_text,
+     edf_get_preamble_text_length, edf_get_recording_data, edf_get_sample_data,
+     edf_get_event_data) = [None] * 8
+    has_edfapi = False
+    why_not = str(exp)
+
 from .._baseraw import _BaseRaw
 from ._defines import event_constants
 from . import _defines as defines
@@ -28,6 +38,8 @@ class RawEDF(_BaseRaw):
         The name of the EDF file.
     """
     def __init__(self, fname):
+        if not has_edfapi:
+            raise OSError('Could not load EDF api: %s' % why_not)
         info, discrete, times, samples = _read_raw_edf(fname)
         self.info = info
         self.discrete = discrete

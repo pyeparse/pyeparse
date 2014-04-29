@@ -170,8 +170,8 @@ def plot_heatmap_raw(raw, start=None, stop=None, cmap=None,
         start = raw.time_as_index([start])[0]
     if isinstance(stop, float):
         stop = raw.time_as_index([stop])[0]
-    data, times = raw[start:stop]
-    xdata, ydata = data[:, :2].T
+    data, times = raw[:2, start:stop]
+    xdata, ydata = data
     fig, _ = _plot_heatmap(xdata=xdata, ydata=ydata, width=width,
                            height=height, cmap=cmap, vmax=vmax,
                            colorbar=False, show=False)

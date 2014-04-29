@@ -4,13 +4,15 @@ from nose.tools import assert_raises, assert_true
 from os import path as op
 
 from pyeparse import Raw, RawHD5
-from pyeparse.utils import _get_test_fnames, _TempDir, _requires_pytables
+from pyeparse.utils import (_get_test_fnames, _TempDir, _requires_pytables,
+                            _requires_edfapi)
 
 temp_dir = _TempDir()
 
 fnames = _get_test_fnames()
 
 
+@_requires_edfapi
 @_requires_pytables
 def test_read_write_hd5():
     """Test reading and writing of HD5"""

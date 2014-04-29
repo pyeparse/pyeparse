@@ -4,7 +4,7 @@ from numpy.testing import assert_equal, assert_array_equal
 from nose.tools import assert_true, assert_raises
 
 from pyeparse import Raw, Epochs
-from pyeparse.utils import _get_test_fnames, _has_joblib
+from pyeparse.utils import _get_test_fnames, _has_joblib, _requires_edfapi
 
 warnings.simplefilter('always')  # in case we hit warnings
 
@@ -15,6 +15,7 @@ def _filter_warnings(w):
     return [ww for ww in w if 'Did not find event' in str(ww)]
 
 
+@_requires_edfapi
 def test_epochs_deconv():
     """Test epochs deconvolution"""
     tmin, tmax = -0.5, 1.5
@@ -29,6 +30,10 @@ def test_epochs_deconv():
         raw = Raw(fname)
         epochs = Epochs(raw, events, event_dict,
                         tmin, tmax)
+        a = raw.info['sample_fields']
+        b = epochs.info['data_cols']
+        assert_equal(len(a), len(b))
+        assert_true(all(aa == bb for aa, bb in zip(a, b)))
         data = epochs.get_data('ps')
         assert_raises(RuntimeError, Epochs, raw, events, 'test', tmin, tmax)
         fit, times = epochs.deconvolve()
@@ -43,6 +48,7 @@ def test_epochs_deconv():
                 assert_raises(ValueError, epochs.deconvolve, n_jobs=-1000)
 
 
+@_requires_edfapi
 def test_epochs_combine():
     """Test epochs combine IDs functionality"""
     tmin, tmax = -0.5, 1.5
@@ -71,6 +77,7 @@ def test_epochs_combine():
         assert_array_equal(d1, epochs_2.data)
 
 
+@_requires_edfapi
 def test_epochs_concat():
     """Test epochs concatenation"""
     tmin, tmax = -0.5, 1.5
@@ -114,6 +121,7 @@ def test_epochs_concat():
             assert_array_equal(blink_ab_d, blink_ba_d)
 
 
+@_requires_edfapi
 def test_epochs_io():
     """Test epochs IO functionality"""
     tmin, tmax, event_id = -0.5, 1.5, 999

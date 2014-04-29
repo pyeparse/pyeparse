@@ -6,7 +6,7 @@ import matplotlib
 
 from pyeparse import Raw, Epochs
 from pyeparse.viz import _epochs_axes_onclick, _epochs_navigation_onclick
-from pyeparse.utils import _get_test_fnames
+from pyeparse.utils import _get_test_fnames, _requires_edfapi
 
 warnings.simplefilter('always')  # in case we hit warnings
 matplotlib.use('Agg')  # for testing don't use X server
@@ -19,6 +19,7 @@ class DummyEvent(object):
         self.inaxes = ax
 
 
+@_requires_edfapi
 def test_raw_plot():
     """Test plotting of raw"""
     for fi, fname in enumerate(fnames):
@@ -29,6 +30,7 @@ def test_raw_plot():
         raw.plot()
 
 
+@_requires_edfapi
 def test_epochs_plot():
     """Test plotting of epochs"""
     tmin, tmax, event_id = -0.5, 1.5, 999

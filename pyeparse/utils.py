@@ -105,5 +105,13 @@ def _has_pytables():
         return True
 
 
+def _has_edfapi():
+    """Helper to determine if a user has edfapi installed"""
+    from .edf._raw import has_edfapi
+    return has_edfapi
+
 _requires_pytables = np.testing.dec.skipif(not _has_pytables(),
                                            'Requires pytables')
+
+
+_requires_edfapi = np.testing.dec.skipif(not _has_edfapi(), 'Requires edfapi')

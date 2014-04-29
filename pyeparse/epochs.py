@@ -75,7 +75,7 @@ class Epochs(object):
         n_times = idx_offsets[1] - idx_offsets[0]
         self._n_times = n_times
         self.info = dict(sfreq=raw[0].info['sfreq'],
-                         data_cols=deepcopy(raw[0].info['sample_fields'][1:]),
+                         data_cols=deepcopy(raw[0].info['sample_fields']),
                          ps_units=raw[0].info['ps_units'])
         for r in raw[1:]:
             if r.info['sfreq'] != raw[0].info['sfreq']:
@@ -149,7 +149,7 @@ class Epochs(object):
                 discretes[kind].append(subarray)
         events = events[keep_idx]
         sample_inds = np.array(sample_inds)
-        samples = raw[1:, sample_inds][0]
+        samples = raw[:, sample_inds][0]
         for kind in raw.discrete.keys():
             assert len(discretes[kind]) == len(events)
         return samples, discretes, events
@@ -433,11 +433,11 @@ class Epochs(object):
                 key_match = np.logical_or(key_match, epochs._key_match(key))
             eq_inds.append(np.where(key_match)[0])
 
-        event_times = [epochs.events[eq, 0] for eq in eq_inds]
+        event_times = [epochs.events[eqi, 0] for eqi in eq_inds]
         indices = _get_drop_indices(event_times, method)
         # need to re-index indices
-        indices = np.concatenate([eq[inds]
-                                  for eq, inds in zip(eq_inds, indices)])
+        indices = np.concatenate([eqi[inds]
+                                  for eqi, inds in zip(eq_inds, indices)])
         epochs.drop_epochs(indices)
         # actually remove the indices
         return epochs, indices

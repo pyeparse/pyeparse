@@ -5,18 +5,18 @@
 import pyeparse as pp
 import numpy as np
 
-fname = '../pyeparse/tests/data/test_raw.asc'
+fname = '../pyeparse/tests/data/test_raw.edf'
 
 raw = pp.Raw(fname)
 
 # visualize initial calibration
-raw.plot_calibration(title='9-Point Calibration')
+raw.plot_calibration(title='5-Point Calibration')
 
 # create heatmap
-raw.plot_heatmap(start=10., stop=85.)
+raw.plot_heatmap(start=3., stop=60.)
 
 # find events and epoch data
-events = raw.find_events('user-event', event_id=1)
+events = raw.find_events('SYNCTIME', event_id=1)
 tmin, tmax, event_id = -0.5, 1.5, 1
 epochs = pp.Epochs(raw, events=events, event_id=event_id, tmin=tmin,
                    tmax=tmax)
@@ -24,7 +24,7 @@ epochs = pp.Epochs(raw, events=events, event_id=event_id, tmin=tmin,
 # access pandas data frame and plot single epoch
 import pylab as pl
 pl.figure()
-epochs.data_frame.ix[3, ['xpos', 'ypos']].plot()
+pl.plot(epochs[3].get_data('xpos')[0], epochs[3].get_data('ypos')[0])
 
 # iterate over and access numpy arrays.
 # find epochs withouth loss of tracking / blinks
