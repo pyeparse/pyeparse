@@ -474,7 +474,7 @@ class Epochs(object):
         return zs
 
     def deconvolve(self, spacing=0.1, baseline=(None, 0), bounds=None,
-                   max_iter=500, n_jobs=1):
+                   max_iter=500, kernel=None, n_jobs=1):
         """Deconvolve pupillary responses
 
         Parameters
@@ -491,6 +491,9 @@ class Epochs(object):
             constrain to positive values.
         max_iter : int
             Maximum number of iterations of minimization algorithm.
+        kernel : array | None
+            Kernel to assume when doing deconvolution. If None, the
+            Hoeks and Levelt (1993) kernel will be used.
         n_jobs : array
             Number of jobs to run in parallel.
 
@@ -518,6 +521,12 @@ class Epochs(object):
             bounds = np.array(bounds)
             if bounds.ndim != 1 or bounds.size != 2:
                 raise RuntimeError('bounds must be 2-element array or None')
+        if kernel is None:
+            kernel = pupil_kernel(self.info['sfreq'])
+        else:
+            kernel = np.array(kernel, np.float64)
+            if kernel.ndim != 1:
+                raise TypeError('kernel must be 1D')
 
         # get the data (and make sure it exists)
         pupil_data = self.pupil_zscores(baseline)
@@ -544,7 +553,6 @@ class Epochs(object):
             bounds = []  # compatible with old version of scipy
 
         # Build the convolution matrix
-        kernel = pupil_kernel(self.info['sfreq'])
         conv_mat = np.zeros((n_samp, len(samples)))
         for li, loc in enumerate(samples):
             eidx = min(loc + len(kernel), n_samp)

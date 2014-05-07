@@ -46,12 +46,10 @@ def fwhm_kernel_2d(size, fwhm, center=None):
     return np.exp(-4 * np.log(2) * ((x - x0) ** 2 + (y - y0) ** 2) / fwhm ** 2)
 
 
-def pupil_kernel(fs, dur=4.0):
+def pupil_kernel(fs, dur=4.0, t_max=0.930, n=10.1):
     """Canonical pupil response kernel"""
     n_samp = int(np.round(fs * dur))
     t = np.arange(n_samp, dtype=float) / fs
-    n = 10.1
-    t_max = 0.930
     h = (t ** n) * np.exp(- n * t / t_max)
     h = 0.015 * h / (np.sum(h) * (t[1] - t[0]))
     return h
