@@ -1,11 +1,17 @@
 # -*- coding: utf-8 -*-
 """Wrapper for libedfapi.so"""
 
+import struct
+import sys
 from ctypes import (c_int, Structure, c_char, c_char_p, c_ubyte,
                     c_short, c_ushort, c_uint, c_float, POINTER, CDLL, util)
 
 # find and load the library
-fname = util.find_library('edfapi')
+if sys.platform.startswith('win') and (8 * struct.calcsize("P") == 64):
+    name = 'edfapi64'  # on windows you can install both
+else:
+    name = 'edfapi'
+fname = util.find_library(name)
 if fname is None:
     raise OSError('edfapi not found')
 edfapi = CDLL(fname)

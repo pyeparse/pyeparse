@@ -93,14 +93,14 @@ def _plot_heatmap(xdata, ydata, width, height, cmap=None,
 
     canvas = np.zeros((width, height))
     data = np.c_[xdata, ydata]
-    inds = data[(data[:, 0] > 0) &
-                (data[:, 1] > 0) &
-                (data[:, 0] < width) &
-                (data[:, 1] < height)].astype('i4')
+    with np.errstate(invalid='ignore'):
+        mask = ((data[:, 0] > 0) & (data[:, 1] > 0) &
+                (data[:, 0] < width) & (data[:, 1] < height))
+    inds = data[mask].astype('i4')
     if kernel is not None:
         my_kernel = fwhm_kernel_2d(kernel['size'],
                                    kernel['half_width'])
-        hsize = kernel['size'] / 2
+        hsize = kernel['size'] // 2
     for x, y in inds:
         if kernel is not None:
             kern_indx = np.array([x - hsize, x + hsize])
