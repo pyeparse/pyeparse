@@ -5,7 +5,7 @@
 .. image:: https://coveralls.io/repos/pyeparse/pyeparse/badge.png?branch=master
     :target: https://coveralls.io/r/pyeparse/pyeparse?branch=master
 
-`pyeparse <https://github.com/dengemann/pyeparse>`_
+`pyeparse <https://github.com/pyeparse/pyeparse>`_
 =======================================================
 
 This package is designed for interactive as well as scripting-oriented processing
