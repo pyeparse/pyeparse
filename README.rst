@@ -2,8 +2,8 @@
 
 .. image:: https://travis-ci.org/pyeparse/pyeparse.svg?branch=master
     :target: https://travis-ci.org/pyeparse/pyeparse
-.. image:: https://coveralls.io/repos/dengemann/pyeparse/badge.png?branch=master
-    :target: https://coveralls.io/r/dengemann/pyeparse?branch=master
+.. image:: https://coveralls.io/repos/pyeparse/pyeparse/badge.png?branch=master
+    :target: https://coveralls.io/r/pyeparse/pyeparse?branch=master
 
 `pyeparse <https://github.com/dengemann/pyeparse>`_
 =======================================================
