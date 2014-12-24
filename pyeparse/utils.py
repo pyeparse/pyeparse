@@ -93,10 +93,10 @@ def _has_joblib():
         return True
 
 
-def _has_pytables():
+def _has_h5py():
     """Helper to determine if joblib is installed"""
     try:
-        import tables  # noqa
+        import h5py  # noqa
     except Exception:
         return False
     else:
@@ -108,8 +108,8 @@ def _has_edfapi():
     from .edf._raw import has_edfapi
     return has_edfapi
 
-_requires_pytables = np.testing.dec.skipif(not _has_pytables(),
-                                           'Requires pytables')
+_requires_h5py = np.testing.dec.skipif(not _has_h5py(),
+                                       'Requires h5py')
 
 
 _requires_edfapi = np.testing.dec.skipif(not _has_edfapi(), 'Requires edfapi')
