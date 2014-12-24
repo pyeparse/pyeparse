@@ -22,7 +22,7 @@ install:
   - "python -c \"import struct; print(struct.calcsize('P') * 8)\""
 
   # Install the dependencies of the project.
-  - "conda install --yes --quiet setuptools numpy scipy matplotlib pandas h5py nose joblib"
+  - "conda install --yes --quiet setuptools numpy scipy matplotlib pandas h5py nose"
   - "pip install nose-timer"
   - "python setup.py develop"
 

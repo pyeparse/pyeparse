@@ -10,8 +10,8 @@ virtualenv:
 env:
     - PYTHON=2.6 DEPS=full
     - PYTHON=2.7 DEPS=full  # note: this runs python-pandas (old version)
-    - PYTHON=3.3 DEPS=full
-    - PYTHON=3.3 DEPS=minimal  # pandas, joblib, h5py optional
+    - PYTHON=3.4 DEPS=full
+    - PYTHON=3.4 DEPS=minimal  # pandas, joblib, h5py optional
     - PYTHON=2.7 DEPS=minimal  # not even edfapi
 
 before_install:

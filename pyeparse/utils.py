@@ -109,7 +109,7 @@ def _has_edfapi():
     return has_edfapi
 
 _requires_h5py = np.testing.dec.skipif(not _has_h5py(),
-                                           'Requires h5py')
+                                       'Requires h5py')
 
 
 _requires_edfapi = np.testing.dec.skipif(not _has_edfapi(), 'Requires edfapi')
