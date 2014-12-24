@@ -11,7 +11,7 @@ env:
     - PYTHON=2.6 DEPS=full
     - PYTHON=2.7 DEPS=full  # note: this runs python-pandas (old version)
     - PYTHON=3.3 DEPS=full
-    - PYTHON=3.3 DEPS=minimal  # pandas, joblib, pytables optional
+    - PYTHON=3.3 DEPS=minimal  # pandas, joblib, h5py optional
     - PYTHON=2.7 DEPS=minimal  # not even edfapi
 
 before_install:
@@ -40,12 +40,12 @@ install:
         travis_retry sudo apt-get -qq install -y --force-yes edfapi-3.1;
         sudo ldconfig;
       fi;
-    # pandas, joblib, pytables
+    # pandas, joblib, h5py
     - if [ "${DEPS}" == "full" ]; then
         if [ "${PYTHON}" == "2.7" ]; then
-          travis_retry sudo apt-get -qq install python-pandas python-joblib python-tables;
+          travis_retry sudo apt-get -qq install python-pandas python-joblib python-h5py;
         else
-          conda install --yes --quiet pandas pytables;
+          conda install --yes --quiet pandas h5py;
           pip install joblib;
         fi;
       fi;

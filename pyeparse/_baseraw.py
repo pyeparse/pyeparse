@@ -63,33 +63,21 @@ class _BaseRaw(object):
             raise IOError('file "%s" exists, use overwrite=True to overwrite'
                           % fname)
         try:
-            import tables as tb
+            import h5py
         except Exception:
-            raise ImportError('pytables could not be imported')
-        o_f = tb.open_file if hasattr(tb, 'open_file') else tb.openFile
-        with o_f(fname, mode='w') as fid:
-            if hasattr(fid, 'create_group'):
-                c_g = fid.create_group
-                c_t = fid.create_table
-                c_c_a = fid.create_carray
-            else:
-                c_g = fid.createGroup
-                c_t = fid.createTable
-                c_c_a = fid.createCArray
+            raise ImportError('h5py could not be imported')
+        with h5py.File(fname, mode='w') as fid:
             # samples
-            filters = tb.Filters(complib='zlib', complevel=5)
+            comp_kw = dict(compression='gzip', compression_opts=5)
             s = np.core.records.fromarrays(self._samples)
             s.dtype.names = self.info['sample_fields']
-            c_t(fid.root, 'samples', s)
+            fid.create_dataset('samples', data=s, **comp_kw)
             # times
-            atom = tb.Atom.from_dtype(self._times.dtype)
-            s = c_c_a(fid.root, 'times', atom,
-                      self._times.shape, filters=filters)
-            s[:] = self._times
+            fid.create_dataset('times', data=self._times, **comp_kw)
             # discrete
-            dg = c_g(fid.root, 'discrete')
+            dg = fid.create_group('discrete')
             for key, val in self.discrete.items():
-                c_t(dg, key, val, filters=filters)
+                dg.create_dataset(key, data=val, **comp_kw)
             # info (harder)
             info = deepcopy(self.info)
             info['meas_date'] = info['meas_date'].isoformat()
@@ -104,11 +92,11 @@ class _BaseRaw(object):
                      ('version', '|S256'),
                      ]
             data = np.array([tuple([info[t[0]] for t in items])], dtype=items)
-            c_t(fid.root, 'info', data, filters=filters)
+            fid.create_dataset('info', data=data, **comp_kw)
             # calibrations
-            cg = c_g('/', 'calibrations')
+            cg = fid.create_group('calibrations')
             for ci, cal in enumerate(self.info['calibrations']):
-                c_t(cg, 'c%s' % ci, cal)
+                cg.create_dataset('c%s' % ci, data=cal)
 
     @property
     def n_samples(self):

@@ -60,7 +60,7 @@ Dependencies
 ^^^^^^^^^^^^
 
 The required dependencies to build the software are Python >= 2.6,
-NumPy >= 1.4, Scipy >= 0.11, and Pytables. Pandas is an optional dependency
+NumPy >= 1.4, Scipy >= 0.11, and h5py. Pandas is an optional dependency
 that speeds up file reading. You must also have the Eyelink SDK installed
 in order to read EDF files.
 

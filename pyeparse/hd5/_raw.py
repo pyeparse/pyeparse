@@ -19,36 +19,34 @@ class RawHD5(_BaseRaw):
     """
     def __init__(self, fname):
         try:
-            import tables as tb
+            import h5py
         except:
-            raise ImportError('pytables is required but was not found')
+            raise ImportError('h5py is required but was not found')
         if not op.isfile(fname):
             raise IOError('file "%s" not found' % fname)
         info = dict()
-        o_f = tb.open_file if hasattr(tb, 'open_file') else tb.openFile
-        with o_f(fname) as fid:
+        with h5py.File(fname, mode='r') as fid:
             # samples
-            g_n = fid.get_node if hasattr(fid, 'get_node') else fid.getNode
-            samples = g_n('/', 'samples').read()
+            samples = np.array(fid['samples'])
             info['sample_fields'] = list(deepcopy(samples.dtype.names))
             samples = samples.view(np.float64).reshape(samples.shape[0], -1).T
             # times
-            times = g_n('/', 'times').read()
+            times = np.array(fid['times'])
             # discrete
             discrete = dict()
-            dg = g_n('/', 'discrete')
-            for key in dg.__members__:
-                discrete[key] = getattr(dg, key).read()
+            dg = fid['discrete']
+            for key in dg.keys():
+                discrete[key] = np.array(dg[key])
             # info
-            data = g_n('/', 'info').read()
+            data = np.array(fid['info'])
             for key in data.dtype.names:
                 info[key] = data[key][0]
             date = info['meas_date'].decode('ASCII')
             info['meas_date'] = datetime.strptime(date, '%Y-%m-%dT%H:%M:%S')
             # calibrations
-            cg = g_n(fid.root, 'calibrations')
-            cals = np.array([g_n(cg, 'c%s' % ii).read()
-                             for ii in range(len(cg.__members__))])
+            cg = fid['calibrations']
+            cals = np.array([np.array(cg['c%s' % ii])  # maintain order
+                             for ii in range(len(cg.keys()))])
             info['calibrations'] = cals
 
         self._samples = samples
