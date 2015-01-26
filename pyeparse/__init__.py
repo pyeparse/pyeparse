@@ -9,4 +9,4 @@ from .hd5._raw import RawHD5  # noqa
 from .epochs import Epochs  # noqa
 from . import viz  # noqa
 
-__version__ = '0.1.0'
+__version__ = '0.2.0.dev0'
