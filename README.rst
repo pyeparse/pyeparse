@@ -4,6 +4,8 @@
     :target: https://travis-ci.org/pyeparse/pyeparse
 .. image:: https://coveralls.io/repos/pyeparse/pyeparse/badge.png?branch=master
     :target: https://coveralls.io/r/pyeparse/pyeparse?branch=master
+.. image:: https://zenodo.org/badge/5822/pyeparse/pyeparse.svg
+    :target: http://dx.doi.org/10.5281/zenodo.14566
 
 `pyeparse <https://github.com/pyeparse/pyeparse>`_
 =======================================================
