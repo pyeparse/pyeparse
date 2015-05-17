@@ -3,7 +3,7 @@ import warnings
 from numpy.testing import assert_equal, assert_array_equal
 from nose.tools import assert_true, assert_raises
 
-from pyeparse import Raw, Epochs
+from pyeparse import read_raw, Epochs
 from pyeparse.utils import _get_test_fnames, _has_joblib, _requires_edfapi
 
 warnings.simplefilter('always')  # in case we hit warnings
@@ -27,7 +27,7 @@ def test_epochs_deconv():
             n_jobs = 1
         else:
             n_jobs = 0
-        raw = Raw(fname)
+        raw = read_raw(fname)
         epochs = Epochs(raw, events, event_dict,
                         tmin, tmax)
         a = raw.info['sample_fields']
@@ -56,7 +56,7 @@ def test_epochs_combine():
     events_1 = np.array([[12000, 1], [1000, 2], [10000, 2], [2000, 3]])
     events_2 = np.array([[12000, 2], [1000, 1], [10000, 1], [2000, 3]])
     for fname in fnames:
-        raw = Raw(fname)
+        raw = read_raw(fname)
         epochs_1 = Epochs(raw, events_1, event_dict, tmin, tmax)
         epochs_2 = Epochs(raw, events_2, event_dict, tmin, tmax)
         assert_raises(ValueError, epochs_1.combine_event_ids, ['foo', 'bar'],
@@ -85,7 +85,7 @@ def test_epochs_concat():
     events_a = np.array([[12000, 77], [1000, 999], [-1, 999]])
     events_b = np.array([[1000, 999], [10000, 999]])
     for fname in fnames:
-        raw = Raw(fname)
+        raw = read_raw(fname)
         events_a[-1, 0] = raw.n_samples - 1
         epochs_ab = Epochs([raw] * 2, [events_a, events_b], event_dict,
                            tmin, tmax)
@@ -129,7 +129,7 @@ def test_epochs_io():
     # create some evil events
     events = np.array([[12000, 77], [1000, 999], [10000, 999]])
     for fname in fnames:
-        raw = Raw(fname)
+        raw = read_raw(fname)
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter('always')
             epochs = Epochs(raw, events, missing_event_dict, tmin, tmax,

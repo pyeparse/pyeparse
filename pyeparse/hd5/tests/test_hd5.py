@@ -3,7 +3,7 @@ from numpy.testing import assert_array_equal
 from nose.tools import assert_raises, assert_true
 from os import path as op
 
-from pyeparse import Raw, RawHD5
+from pyeparse import read_raw
 from pyeparse.utils import (_get_test_fnames, _TempDir, _requires_h5py,
                             _requires_edfapi)
 
@@ -17,13 +17,13 @@ fnames = _get_test_fnames()
 def test_read_write_hd5():
     """Test reading and writing of HD5"""
     for fname in fnames:
-        r = Raw(fname)
+        r = read_raw(fname)
         out_fname = op.join(temp_dir, 'temp.hd5')
         r.save(out_fname, overwrite=True)
         assert_raises(IOError, r.save, out_fname)  # overwrite=False
-        r2 = RawHD5(out_fname)
+        r2 = read_raw(out_fname)
         r2.save(out_fname, overwrite=True)  # double write (make sure works)
-        r2 = RawHD5(out_fname)
+        r2 = read_raw(out_fname)
         # samples
         assert_array_equal(r._samples, r2._samples)
         # times

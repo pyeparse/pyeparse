@@ -140,7 +140,7 @@ def _read_raw_edf(fname):
 
     _extract_calibration(info, discrete['messages'])
 
-    # now we corect our time offsets
+    # now we correct our time offsets
     return info, discrete, times, data
 
 
@@ -339,7 +339,8 @@ def _handle_message(edf, res):
     """MESSAGEEVENT"""
     e = edf_get_event_data(edf).contents
     msg = ct.string_at(ct.byref(e.message[0]), e.message.contents.len + 1)[2:]
-    msg = msg.decode('ASCII')
+    msg = msg.decode('UTF-8')
+    msg = ''.join([i if ord(i) < 128 else '' for i in msg])
     if len(msg) > _MAX_MSG_LEN:
         warnings.warn('Message truncated to %s characters:\n%s'
                       % (_MAX_MSG_LEN, msg))
