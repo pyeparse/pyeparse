@@ -295,7 +295,7 @@ def read_raw(fname):
     if ext == '.edf':
         from .edf._raw import RawEDF
         raw = RawEDF(fname)
-    elif ext == '.hdf':
+    elif ext == '.hd5':
         from .hd5._raw import RawHD5
         raw = RawHD5(fname)
     return raw
