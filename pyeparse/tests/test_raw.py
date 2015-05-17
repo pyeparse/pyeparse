@@ -4,7 +4,7 @@ from nose.tools import assert_raises
 import warnings
 from nose.tools import assert_true, assert_equal
 
-from pyeparse import Raw
+from pyeparse import read_raw
 from pyeparse.utils import _get_test_fnames, _requires_edfapi
 
 warnings.simplefilter('always')  # in case we hit warnings
@@ -16,7 +16,7 @@ fnames = _get_test_fnames()
 def test_raw_io():
     """Test raw EDF IO functionality"""
     for fi, fname in enumerate(fnames):
-        raw = Raw(fname)
+        raw = read_raw(fname)
         print(raw)  # test repr works
 
         # tests dtypes are parsed correctly that is double only
@@ -36,7 +36,7 @@ def test_raw_io():
 def test_access_data():
     """Test raw slicing and indexing"""
     for fname in fnames:
-        raw = Raw(fname)
+        raw = read_raw(fname)
         for idx in [[1, 3], slice(50)]:
             data, times = raw[:, idx]
             assert_equal(data.shape[1], len(times))

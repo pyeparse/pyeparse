@@ -4,7 +4,7 @@ from functools import partial
 import warnings
 import matplotlib
 
-from pyeparse import Raw, Epochs
+from pyeparse import read_raw, Epochs
 from pyeparse.viz import _epochs_axes_onclick, _epochs_navigation_onclick
 from pyeparse.utils import _get_test_fnames, _requires_edfapi
 
@@ -23,7 +23,7 @@ class DummyEvent(object):
 def test_raw_plot():
     """Test plotting of raw"""
     for fi, fname in enumerate(fnames):
-        raw = Raw(fname)
+        raw = read_raw(fname)
         raw.plot_calibration()
         raw.plot_heatmap(0., 10., vmax=1)
         raw.plot_heatmap(0., 10., kernel=None)
@@ -37,7 +37,7 @@ def test_epochs_plot():
     # create some evil events
     events = np.array([[1000, 999], [2000, 999], [3000, 999]])
     for fname in fnames:
-        raw = Raw(fname)
+        raw = read_raw(fname)
         epochs = Epochs(raw, events, event_id, tmin, tmax)
         assert_raises(ValueError, epochs.plot, picks=['whatever'])
         epochs.plot(picks=['ps'])
