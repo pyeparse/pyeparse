@@ -4,8 +4,8 @@
 
 from . import utils  # noqa
 from .edf._raw import RawEDF  # noqa
-Raw = RawEDF  # noqa
 from .hd5._raw import RawHD5  # noqa
+from ._baseraw import read_raw
 from .epochs import Epochs  # noqa
 from . import viz  # noqa
 

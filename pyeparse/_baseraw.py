@@ -1,4 +1,5 @@
 # Authors: Denis Engemann <denis.engemann@gmail.com>
+#          Teon Brooks <teon.brooks@gmail.com>
 #
 # License: BSD (3-clause)
 
@@ -201,8 +202,6 @@ class _BaseRaw(object):
 
         Parameters
         ----------
-        raw : instance of pyeparse.raw.Raw
-            the raw file to find events in.
         pattern : str | callable
             A substring to be matched or a callable that matches
             a string, for example ``lambda x: 'my-message' in x``
@@ -281,3 +280,22 @@ class _BaseRaw(object):
             vals = self[:, sidx:eidx][0]
             vals[:] = np.nan
             ps_vals[:] = fix
+
+
+def read_raw(fname):
+    """General Eye-tracker Reader
+
+    Parameters
+    ----------
+    fname : str
+        The name of the eye-tracker data file.
+        Files currently supported are EDF and HD5
+    """    
+    _, ext = op.splitext(fname)
+    if ext == '.edf':
+        from .edf._raw import RawEDF
+        raw = RawEDF(fname)
+    elif ext == '.hdf':
+        from .hd5._raw import RawHD5
+        raw = RawHD5(fname)
+    return raw
