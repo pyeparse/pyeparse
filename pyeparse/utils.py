@@ -46,12 +46,29 @@ def fwhm_kernel_2d(size, fwhm, center=None):
     return np.exp(-4 * np.log(2) * ((x - x0) ** 2 + (y - y0) ** 2) / fwhm ** 2)
 
 
-def pupil_kernel(fs, dur=4.0, t_max=0.930, n=10.1):
-    """Canonical pupil response kernel"""
+def pupil_kernel(fs, dur=4.0, t_max=0.930, n=10.1, s=1.):
+    """Generate pupil response kernel modeled as an Erlang gamma function.
+
+    Parameters
+    ----------
+    fs : int
+        Sampling frequency (samples/second) to use in generating the kernel.
+    dur : float
+        Length (in seconds) of the generated kernel.
+    t_max : float
+        Time (in seconds) where the response maximum is stipulated to occur.
+    n : float
+        Number of negative-exponential layers in the cascade defining the
+    s : float | None
+        Desired value for the area under the kernel. If `None`, no scaling is
+        performed.
+    """
+
     n_samp = int(np.round(fs * dur))
     t = np.arange(n_samp, dtype=float) / fs
     h = (t ** n) * np.exp(- n * t / t_max)
-    h = 0.015 * h / (np.sum(h) * (t[1] - t[0]))
+    denom = 1. if s is None else np.sum(h) * (t[1] - t[0])
+    h = s * h / denom
     return h
 
 
