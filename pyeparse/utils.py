@@ -67,7 +67,7 @@ def pupil_kernel(fs, dur=4.0, t_max=0.930, n=10.1, s=1.):
     n_samp = int(np.round(fs * dur))
     t = np.arange(n_samp, dtype=float) / fs
     h = (t ** n) * np.exp(- n * t / t_max)
-    scal = 1. if s is None else float(s) / np.sum(h) * (t[1] - t[0])
+    scal = 1. if s is None else float(s) / (np.sum(h) * (t[1] - t[0]))
     h = scal * h
     return h
 
