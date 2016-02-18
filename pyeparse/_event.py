@@ -40,7 +40,8 @@ def find_events(raw, pattern, event_id):
     if callable(pattern):
         func = pattern
     elif isinstance(pattern, string_types):
-        func = lambda x: pattern in x
+        def func(x):
+            return pattern in x
     else:
         raise ValueError('Pattern not valid. Pass string or function')
     idx = np.array([func(msg.decode('ASCII')) for msg in df['msg']])

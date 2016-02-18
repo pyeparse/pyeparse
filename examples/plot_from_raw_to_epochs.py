@@ -2,8 +2,10 @@
 #
 # License: BSD (3-clause)
 
-import pyeparse as pp
 import numpy as np
+import matplotlib.pyplot as plt
+
+import pyeparse as pp
 
 fname = '../pyeparse/tests/data/test_raw.edf'
 
@@ -22,28 +24,26 @@ epochs = pp.Epochs(raw, events=events, event_id=event_id, tmin=tmin,
                    tmax=tmax)
 
 # access pandas data frame and plot single epoch
-import pylab as pl
-pl.figure()
-pl.plot(epochs[3].get_data('xpos')[0], epochs[3].get_data('ypos')[0])
+fig, ax = plt.subplots()
+ax.plot(epochs[3].get_data('xpos')[0], epochs[3].get_data('ypos')[0])
 
 # iterate over and access numpy arrays.
 # find epochs withouth loss of tracking / blinks
 print(len([e for e in epochs if not np.isnan(e).any()]))
 
-pl.figure()
-pl.title('Superimposed saccade responses')
+fig, ax = plt.subplots()
+ax.set_title('Superimposed saccade responses')
 n_trials = 12  # first 12 trials
 for epoch in epochs[:n_trials]:
-    pl.plot(epochs.times * 1e3, epoch[0].T)
-pl.show()
+    ax.plot(epochs.times * 1e3, epoch[0].T)
 
 time_mask = epochs.times > 0
 times = epochs.times * 1e3
 
-pl.figure()
-pl.plot(times[time_mask], epochs.data[0, 0, time_mask])
-pl.title('Post baseline saccade (X, pos)')
-pl.show()
+fig, ax = plt.subplots()
+ax.plot(times[time_mask], epochs.data[0, 0, time_mask])
+ax.set_title('Post baseline saccade (X, pos)')
 
 # plot single trials
 epochs.plot(picks=['xpos'], draw_discrete='saccades')
+plt.show()

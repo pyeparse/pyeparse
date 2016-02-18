@@ -6,6 +6,9 @@
 ##############################################################################
 # Py2/3
 
+import numpy as np
+import warnings
+
 # Iterator
 try:
     advance_iterator = next
@@ -28,9 +31,6 @@ except ImportError:  # py3 has renamed this
 from io import BytesIO  # noqa
 
 # -*- coding: utf-8 -*-
-
-import numpy as np
-import warnings
 
 
 ##############################################################################

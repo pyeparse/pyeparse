@@ -140,8 +140,8 @@ class Epochs(object):
                 names = df.dtype.names
                 comp_1 = df['stime']
                 comp_2 = df['etime'] if 'etime' in names else df['stime']
-                idx = np.where((comp_1 >= this_tmin)
-                               & (comp_2 <= this_tmax))[0]
+                idx = np.where((comp_1 >= this_tmin) &
+                               (comp_2 <= this_tmax))[0]
                 subarray = df[idx]
                 subarray['stime'] -= this_time
                 if 'etime' in subarray.dtype.names:
@@ -220,8 +220,8 @@ class Epochs(object):
 
     @property
     def times(self):
-        return (np.arange(self.n_times).astype(float) / self.info['sfreq']
-                + self.tmin)
+        return (np.arange(self.n_times).astype(float) / self.info['sfreq'] +
+                self.tmin)
 
     def _str_to_idx(self, string):
         """Convert epoch string label to set of indices"""
@@ -240,6 +240,8 @@ class Epochs(object):
                 idx = np.concatenate([self._str_to_idx(ii) for ii in idx])
         if isinstance(idx, slice):
             idx = np.arange(len(self))[idx]
+        else:
+            idx = np.atleast_1d(idx)
         idx = np.atleast_1d(np.sort(idx))
         out._data = out._data[idx]
         out.events = out.events[idx]
