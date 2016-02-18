@@ -288,8 +288,7 @@ def _epochs_navigation_onclick(event, params):
     elif event.inaxes == p['next'].ax:
         here = -1
     elif event.inaxes == p['reject-quit'].ax:
-        if p['reject_idx']:
-            pass
+        p['epochs'].drop_epochs(p['reject_idx'])
         mpl.close(p['fig'])
         mpl.close(event.inaxes.get_figure())
 
