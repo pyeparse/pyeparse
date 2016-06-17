@@ -476,7 +476,7 @@ class Epochs(object):
         return zs
 
     def deconvolve(self, spacing=0.1, baseline=(None, 0), bounds=None,
-                   max_iter=500, kernel=None, n_jobs=1):
+                   max_iter=500, kernel=None, n_jobs=1, acc=1e-6):
         """Deconvolve pupillary responses
 
         Parameters
@@ -498,6 +498,9 @@ class Epochs(object):
             Hoeks and Levelt (1993) kernel will be used.
         n_jobs : array
             Number of jobs to run in parallel.
+        acc : float
+            The requested accuracy. Lower accuracy generally means smoother
+            fits.
 
         Returns
         -------
@@ -561,7 +564,7 @@ class Epochs(object):
             conv_mat[loc:eidx, li] = kernel[:eidx-loc]
 
         # do the fitting
-        fit_fails = parallel(p_fun(data, conv_mat, bounds, max_iter)
+        fit_fails = parallel(p_fun(data, conv_mat, bounds, max_iter, acc)
                              for data in np.array_split(pupil_data, n_jobs))
         fit = np.concatenate([f[0] for f in fit_fails])
         fails = np.concatenate([f[1] for f in fit_fails])
@@ -573,15 +576,15 @@ class Epochs(object):
         return fit, times
 
 
-def _do_deconv(pupil_data, conv_mat, bounds, max_iter):
+def _do_deconv(pupil_data, conv_mat, bounds, max_iter, acc):
     """Helper to parallelize deconvolution"""
-    x0 = np.ones(conv_mat.shape[1])
+    x0 = np.zeros(conv_mat.shape[1])
     fit = np.empty((len(pupil_data), conv_mat.shape[1]))
     failed = np.empty(len(pupil_data))
     for di, data in enumerate(pupil_data):
-        out = fmin_slsqp(_score, x0, args=(data, conv_mat), epsilon=1e-3,
+        out = fmin_slsqp(_score, x0, args=(data, conv_mat), epsilon=1e-4,
                          bounds=bounds, disp=False, full_output=True,
-                         iter=max_iter, acc=1e-6)
+                         iter=max_iter, acc=acc)
         fit[di, :] = out[0]
         failed[di] = out[3]
     return fit, failed
