@@ -21,12 +21,14 @@ edfapi = CDLL(fname)
 class LSTRING(Structure):
     pass
 
+
 LSTRING.__slots__ = ['len', 'c']
 LSTRING._fields_ = [('len', c_short), ('c', c_char)]
 
 
 class FSAMPLE(Structure):
     pass
+
 
 cf = c_float
 cf2 = c_float * 2
@@ -49,6 +51,7 @@ FSAMPLE._fields_ = [
 class FEVENT(Structure):
     pass
 
+
 FEVENT.__slots__ = [
     'time', 'type', 'read', 'sttime', 'entime', 'hstx', 'hsty', 'gstx', 'gsty',
     'sta', 'henx', 'heny', 'genx', 'geny', 'ena', 'havx', 'havy',
@@ -69,6 +72,7 @@ FEVENT._fields_ = [
 
 class RECORDINGS(Structure):
     pass
+
 
 RECORDINGS.__slots__ = [
     'time', 'sample_rate', 'eflags', 'sflags', 'state', 'record_type',

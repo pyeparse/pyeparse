@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""HD5 Raw class"""
+"""HD5 Raw class."""
 
 import numpy as np
 from os import path as op
@@ -20,7 +20,7 @@ class RawHD5(_BaseRaw):
     def __init__(self, fname):
         try:
             import h5py
-        except:
+        except Exception:
             raise ImportError('h5py is required but was not found')
         if not op.isfile(fname):
             raise IOError('file "%s" not found' % fname)

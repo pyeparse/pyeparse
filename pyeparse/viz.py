@@ -187,6 +187,7 @@ def plot_heatmap_raw(raw, start=None, stop=None, cmap=None,
     mpl.show() if show else None
     return fig
 
+
 """
 Note. The following functions are based on Denis A. Engemann's and
 Eric Larson's contribution to MNE-Python

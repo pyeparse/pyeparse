@@ -11,7 +11,7 @@ import atexit
 
 
 def create_chunks(sequence, size):
-    """Generate chunks from a sequence
+    """Generate chunks from a sequence.
 
     Note. copied from MNE-Python
 
@@ -26,7 +26,7 @@ def create_chunks(sequence, size):
 
 
 def fwhm_kernel_2d(size, fwhm, center=None):
-    """ Make a square gaussian kernel.
+    """Make a square gaussian kernel.
 
     Note: adapted from https://gist.github.com/andrewgiessel/4635563
 
@@ -36,7 +36,6 @@ def fwhm_kernel_2d(size, fwhm, center=None):
         The length of the square matrix to create.
     fmhw : int
         The full wdith at hald maximum value.
-
     """
     x = np.arange(0, size, 1, np.float64)
     y = x[:, np.newaxis]
@@ -63,7 +62,6 @@ def pupil_kernel(fs, dur=4.0, t_max=0.930, n=10.1, s=1.):
         Desired value for the area under the kernel. If `None`, no scaling is
         performed.
     """
-
     n_samp = int(np.round(fs * dur))
     t = np.arange(n_samp, dtype=float) / fs
     h = (t ** n) * np.exp(- n * t / t_max)
@@ -73,14 +71,14 @@ def pupil_kernel(fs, dur=4.0, t_max=0.930, n=10.1, s=1.):
 
 
 def _get_test_fnames():
-    """Get usable test files (omit EDF if no edf2asc)"""
+    """Get usable test files (omit EDF if no edf2asc)."""
     path = op.join(op.dirname(__file__), 'tests', 'data')
     fnames = glob.glob(op.join(path, '*.edf'))
     return fnames
 
 
 class _TempDir(str):
-    """Class for creating and auto-destroying temp dir
+    """Class for creating and auto-destroying temp dir.
 
     This is designed to be used with testing modules.
 
@@ -101,7 +99,7 @@ class _TempDir(str):
 
 
 def _has_joblib():
-    """Helper to determine if joblib is installed"""
+    """Determine if joblib is installed."""
     try:
         import joblib  # noqa
     except Exception:
@@ -111,7 +109,7 @@ def _has_joblib():
 
 
 def _has_h5py():
-    """Helper to determine if joblib is installed"""
+    """Determine if joblib is installed."""
     try:
         import h5py  # noqa
     except Exception:
@@ -121,9 +119,10 @@ def _has_h5py():
 
 
 def _has_edfapi():
-    """Helper to determine if a user has edfapi installed"""
+    """Determine if a user has edfapi installed."""
     from .edf._raw import has_edfapi
     return has_edfapi
+
 
 _requires_h5py = np.testing.dec.skipif(not _has_h5py(),
                                        'Requires h5py')

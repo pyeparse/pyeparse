@@ -1,5 +1,4 @@
 import numpy as np
-from weakref import WeakMethod
 import pytest
 from functools import partial
 
