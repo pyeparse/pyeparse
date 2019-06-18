@@ -5,7 +5,7 @@
 
 from copy import deepcopy
 import numpy as np
-from scipy.optimize import fmin_slsqp
+from scipy import linalg
 import warnings
 
 from ._event import Discrete
@@ -476,7 +476,8 @@ class Epochs(object):
         return zs
 
     def deconvolve(self, spacing=0.1, baseline=(None, 0), bounds=None,
-                   max_iter=500, kernel=None, n_jobs=1, acc=1e-6):
+                   max_iter=500, kernel=None, n_jobs=1, acc=1e-6,
+                   method='minimize', reg=100):
         """Deconvolve pupillary responses
 
         Parameters
@@ -501,6 +502,11 @@ class Epochs(object):
         acc : float
             The requested accuracy. Lower accuracy generally means smoother
             fits.
+        method : str
+            Can be "minimize" to use SLSQP or "regularize" to use
+            Tikhonov-regularized pseudoinverse.
+        reg : float
+            Regularization factor for pseudoinverse calculation.
 
         Returns
         -------
@@ -532,6 +538,10 @@ class Epochs(object):
             kernel = np.array(kernel, np.float64)
             if kernel.ndim != 1:
                 raise TypeError('kernel must be 1D')
+        if not isinstance(method, string_types) or method not in\
+                ('minimize', 'inverse'):
+            raise ValueError('method must be "minimize" or "inverse", got %s'
+                             % (method,))
 
         # get the data (and make sure it exists)
         pupil_data = self.pupil_zscores(baseline)
@@ -564,20 +574,30 @@ class Epochs(object):
             conv_mat[loc:eidx, li] = kernel[:eidx-loc]
 
         # do the fitting
-        fit_fails = parallel(p_fun(data, conv_mat, bounds, max_iter, acc)
-                             for data in np.array_split(pupil_data, n_jobs))
-        fit = np.concatenate([f[0] for f in fit_fails])
-        fails = np.concatenate([f[1] for f in fit_fails])
-        if np.any(fails):
-            reasons = ', '.join(str(r) for r in
-                                np.setdiff1d(np.unique(fails), [0]))
-            warnings.warn('%i/%i fits did not converge (reasons: %s)'
-                          % (np.sum(fails != 0), len(fails), reasons))
+        if method == 'inverse':
+            u, s, v = linalg.svd(conv_mat, full_matrices=False)
+            s[s < 1e-7 * s[0]] = 0
+            pos_s = s[s > 0]
+            s[s > 0] = pos_s / (pos_s ** 2 + reg)
+            inv_conv_mat = np.dot(v.T, s[:, np.newaxis] * u.T)
+            fit = np.dot(pupil_data, inv_conv_mat.T)
+        else:  # minimize
+            fit_fails = parallel(
+                p_fun(data, conv_mat, bounds, max_iter, acc)
+                for data in np.array_split(pupil_data, n_jobs))
+            fit = np.concatenate([f[0] for f in fit_fails])
+            fails = np.concatenate([f[1] for f in fit_fails])
+            if np.any(fails):
+                reasons = ', '.join(str(r) for r in
+                                    np.setdiff1d(np.unique(fails), [0]))
+                warnings.warn('%i/%i fits did not converge (reasons: %s)'
+                              % (np.sum(fails != 0), len(fails), reasons))
         return fit, times
 
 
 def _do_deconv(pupil_data, conv_mat, bounds, max_iter, acc):
     """Helper to parallelize deconvolution"""
+    from scipy.optimize import fmin_slsqp
     x0 = np.zeros(conv_mat.shape[1])
     fit = np.empty((len(pupil_data), conv_mat.shape[1]))
     failed = np.empty(len(pupil_data))

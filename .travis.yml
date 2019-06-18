@@ -1,60 +1,37 @@
+dist: xenial
+sudo: true
 language: python
 
-# Here we use anaconda for builds other than 2.7, since it provides the
-# simplest interface for running different versions of Python
-
-virtualenv:
-    # set up our 2.7 to use the system site packages correctly
-    system_site_packages: true
-
-env:
-    - PYTHON=2.6 DEPS=full
-    - PYTHON=2.7 DEPS=full  # note: this runs python-pandas (old version)
-    - PYTHON=3.4 DEPS=full
-    - PYTHON=3.4 DEPS=minimal  # pandas, joblib, h5py optional
-    - PYTHON=2.7 DEPS=minimal  # not even edfapi
+matrix:
+  include:
+  - python: "2.7"
+  - python: "3.5"
+    env: DEPS=minimal  # pandas, joblib, h5py optional
+  - python: "3.7"
 
 before_install:
-    - if [ "${PYTHON}" != "2.7" ]; then
-        wget http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
-        chmod +x miniconda.sh;
-        ./miniconda.sh -b -p ~/anaconda;
-        export PATH=~/anaconda/bin:$PATH;
-        conda update --yes conda;
-      fi;
+  - sudo add-apt-repository "deb http://download.sr-support.com/software SRResearch main"
+  - wget -O - "http://download.sr-support.com/software/dists/SRResearch/SRResearch_key" | sudo apt-key add -
+  - sudo apt-get update
 
 install:
-    - if [ "${PYTHON}" == "2.7" ]; then
-        travis_retry sudo apt-get -qq update;
-        travis_retry sudo apt-get -qq install python-scipy python-nose python-matplotlib;
-      else
-        conda create -n testenv --yes --quiet pip python=$PYTHON;
-        source activate testenv;
-        conda install --yes --quiet scipy nose matplotlib;
-      fi;
-    # edfapi
-    - if [[ "${PYTHON}" != "2.7" || "${DEPS}" == "full" ]]; then
-        echo "deb http://archive.canonical.com/ lucid partner" | sudo tee -a /etc/apt/sources.list;
-        echo "deb http://download.sr-support.com/x64 /" | sudo tee -a /etc/apt/sources.list;
-        travis_retry sudo apt-get -qq update;
-        travis_retry sudo apt-get -qq install -y --force-yes edfapi-3.1;
-        sudo ldconfig;
-      fi;
-    # pandas, joblib, h5py
-    - if [ "${DEPS}" == "full" ]; then
-        if [ "${PYTHON}" == "2.7" ]; then
-          travis_retry sudo apt-get -qq install python-pandas python-joblib python-h5py;
-        else
-          conda install --yes --quiet pandas h5py;
-          pip install joblib;
-        fi;
-      fi;
-    - pip install -q coveralls nose-timer flake8
-    - python setup.py build
-    - python setup.py install
+  - pip install numpy scipy nose matplotlib pytest pytest-cov coveralls pytest-timeout pytest-sugar flake8
+  # edfapi
+  - |
+    if [[ "${DEPS}" != "minimal" ]]; then
+      sudo apt-get install edfapi
+      sudo ldconfig
+    fi
+  # pandas, joblib, h5py
+  - |
+    if [ "${DEPS}" != "minimal" ]; then
+      pip install pandas joblib h5py
+    fi
+  - python setup.py build
+  - python setup.py install
 
 script:
-    - nosetests --with-timer --timer-top-n 10
+    - pytest
     - make flake
 
 after_success:

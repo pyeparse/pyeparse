@@ -23,6 +23,7 @@ doc/modules/generated/
 doc/source/generated/
 pip-log.txt
 .coverage
+junit-results.xml
 tags
 doc/coverages
 doc/samples

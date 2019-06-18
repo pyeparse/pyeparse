@@ -3,7 +3,7 @@
 # caution: testing won't work on windows, see README
 
 PYTHON ?= python
-NOSETESTS ?= nosetests
+PYTEST ?= pytest
 CTAGS ?= ctags
 
 all: clean inplace test
@@ -32,10 +32,8 @@ in: inplace # just a shortcut
 inplace:
 	$(PYTHON) setup.py build_ext -i
 
-nosetests:
+pytest:
 	rm -f .coverage
-	$(NOSETESTS) pyeparse
+	$(PYTEST) pyeparse
 
-test: clean nosetests flake
-
-
+test: clean pytest flake
