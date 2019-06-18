@@ -17,14 +17,16 @@ before_install:
 install:
   - pip install numpy scipy nose matplotlib pytest pytest-cov coveralls pytest-timeout pytest-sugar flake8
   # edfapi
-  - if [[ "${DEPS}" != "minimal" ]]; then
+  - |
+    if [[ "${DEPS}" != "minimal" ]]; then
       sudo apt-get install edfapi
-      sudo ldconfig;
-    fi;
+      sudo ldconfig
+    fi
   # pandas, joblib, h5py
-  - if [ "${DEPS}" != "minimal" ]; then
+  - |
+    if [ "${DEPS}" != "minimal" ]; then
       pip install pandas joblib h5py
-    fi;
+    fi
   - python setup.py build
   - python setup.py install
 
