@@ -74,6 +74,7 @@ def _get_test_fnames():
     """Get usable test files (omit EDF if no edf2asc)."""
     path = op.join(op.dirname(__file__), 'tests', 'data')
     fnames = glob.glob(op.join(path, '*.edf'))
+    fnames.append(fnames[0] + ' ')  # regression test: whitespace should be handled
     return fnames
 
 

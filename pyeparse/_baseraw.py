@@ -291,7 +291,7 @@ def read_raw(fname):
         The name of the eye-tracker data file.
         Files currently supported are EDF and HD5
     """
-    _, ext = op.splitext(fname)
+    _, ext = op.splitext(fname.strip())
     if ext == '.edf':
         from .edf._raw import RawEDF
         raw = RawEDF(fname)
